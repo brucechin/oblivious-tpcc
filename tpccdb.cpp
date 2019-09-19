@@ -99,7 +99,7 @@ TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(Integer home_warehouse,
         const std::vector<NewOrderItem>& items) {
     WarehouseSet out;
     for (size_t i = 0; i < items.size(); ++i) {
-        Integer supplyID = items[i].getSupplyWarehouseID();
+        Integer supplyID = items[i].ol_supply_w_id;
         if (supplyID!= home_warehouse) {
             out.insert(supplyID);
         }
@@ -107,6 +107,19 @@ TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(Integer home_warehouse,
     return out;
 }
 
+
+bool TPCCDB::findAndValidateItems(const vector<NewOrderItem>& items,
+        vector<Item*>* item_tuples) {
+    // CHEAT: Validate all items to see if we will need to abort
+    item_tuples->resize(items.size());
+    for (int i = 0; i < items.size(); ++i) {
+        (*item_tuples)[i] = findItem(items[i].i_id);
+        if ((*item_tuples)[i] == NULL) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool TPCCDB::newOrder(Integer warehouse_id, Integer district_id, Integer customer_id,
         const std::vector<NewOrderItem>& items, TPCCUndo** undo) {
@@ -180,11 +193,17 @@ bool TPCCDB::newOrderRemote(Integer home_warehouse, Integer remote_warehouse,
 
 bool TPCCTables::newOrderHome(Integer warehouse_id, Integer district_id, Integer customer_id,
         const vector<NewOrderItem>& items, TPCCUndo** undo) {
-    //~ printf("new order %d %d %d %d %s\n", warehouse_id, district_id, customer_id, items.size(), now);
-    // 2.4.3.4. requires that we display c_last, c_credit, and o_id for rolled back transactions:
+
     // read those values first
     District* d = findDistrict(warehouse_id, district_id);
     Customer* c = findCustomer(warehouse_id, district_id, customer_id);
+
+    // CHEAT: Validate all items to see if we will need to abort
+    vector<Item*> item_tuples(items.size());
+    if (!findAndValidateItems(items, &item_tuples)) {
+        return false;
+    }
+
 
     // We will not abort: update the status and the database state, allocate an undo buffer
     allocateUndo(undo);
@@ -197,26 +216,33 @@ bool TPCCTables::newOrderHome(Integer warehouse_id, Integer district_id, Integer
 
     Warehouse* w = findWarehouse(warehouse_id);
 
-    Order order();
-    order.o_w_id = warehouse_id;
-    order.o_d_id = district_id;
-    order.o_id = d->d_next_o_id;
-    order.o_c_id = customer_id;
-    order.o_ol_cnt = static_cast<int32_t>(items.size());
-    Order* o = insertOrder(order);
-    NewOrder* no = insertNewOrder(warehouse_id, district_id, d->d_next_o_id);
-    if (undo != NULL) {
-        (*undo)->inserted(o);
-        (*undo)->inserted(no);
-    }
+    Order* order = new Order(party_);
+    order->o_w_id = warehouse_id;
+    order->o_d_id = district_id;
+    //TODO : there is problems with this initilaization because we need two parties to create secret share.
+    order->o_id = Integer(INT_LENGTH, d->d_next_o_id, party_);
+    order->o_c_id = customer_id;
+    order->o_ol_cnt = Integer(INT_LENGTH, items.size(), party_);
+    orders_.push_back(order);
 
-    OrderLine line;
-    line.ol_o_id = d->d_next_o_id;
+    NewOrder* neworder = new NewOrder(party_);
+    neworder->no_w_id = warehouse_id;
+    neworder->no_d_id = district_id;
+    neworder->no_o_id = order->o_id;
+    neworders_.push_back(neworder);
+    // Order* o = insertOrder(order);
+    // NewOrder* no = insertNewOrder(warehouse_id, district_id, d->d_next_o_id);
+    // if (undo != NULL) {
+    //     (*undo)->inserted(o);
+    //     (*undo)->inserted(no);
+    // }
+
+    OrderLine* line = new OrderLine(party_);
+    line.ol_o_id = order->o_id;
     line.ol_d_id = district_id;
     line.ol_w_id = warehouse_id;
 
     for (int i = 0; i < items.size(); ++i) {
-        line.ol_number = i+1;
         line.ol_i_id = items[i].i_id;
         line.ol_supply_w_id = items[i].ol_supply_w_id;
         line.ol_quantity = items[i].ol_quantity;
@@ -226,12 +252,12 @@ bool TPCCTables::newOrderHome(Integer warehouse_id, Integer district_id, Integer
         // TODO: I think this is unrealistic, since it will occupy ~23 MB per warehouse on all
         // replicas. Try the "two round" version in the future.
         Stock* stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
-
-        line.ol_amount = static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;;
-        OrderLine* ol = insertOrderLine(line);
-        if (undo != NULL) {
-            (*undo)->inserted(ol);
-        }
+        line.ol_amount = items[i].ol_quantity * item_tuples[i]->i_price;;
+        orderlines_.push_back(line);
+        //OrderLine* ol = insertOrderLine(line);
+        // if (undo != NULL) {
+        //     (*undo)->inserted(ol);
+        // }
     }
 
     // Perform the "remote" part for this warehouse
@@ -244,6 +270,91 @@ bool TPCCTables::newOrderHome(Integer warehouse_id, Integer district_id, Integer
 
 
 
+void TPCCTables::payment(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+        Integer c_district_id, Integer customer_id, Integer h_amount, const char* now,
+        PaymentOutput* output, TPCCUndo** undo) {
+    //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now);
+    Customer* customer = findCustomer(c_warehouse_id, c_district_id, customer_id);
+    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
+            now, output, undo);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
+}
+
+void TPCCTables::payment(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+        Integer c_district_id, const char* c_last, Integer h_amount, TPCCUndo** undo) {
+    //~ printf("payment %d %d %d %d %s %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, c_last, h_amount, now);
+    Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
+    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer->c_id, h_amount,
+            now, output, undo);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
+}
+
+
+
+void TPCCTables::paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+        Integer c_district_id, Integer c_id, Integer h_amount, TPCCUndo** undo) {
+    Customer* customer = findCustomer(c_warehouse_id, c_district_id, c_id);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount,  undo);
+}
+void TPCCTables::paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+        Integer c_district_id, const char* c_last, Integer h_amount, TPCCUndo** undo) {
+    Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, undo);
+}
+
+
+void TPCCTables::paymentHome(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+        Integer c_district_id, Integer customer_id, Integer h_amount, TPCCUndo** undo) {
+
+    Warehouse* w = findWarehouse(warehouse_id);
+    // if (undo != NULL) {
+    //     allocateUndo(undo);
+    //     (*undo)->save(w);
+    // }
+    w->w_ytd += h_amount;
+
+    District* d = findDistrict(warehouse_id, district_id);
+    // if (undo != NULL) {
+    //     (*undo)->save(d);
+    // }
+    d->d_ytd += h_amount;
+
+    // Insert the line into the history table
+    History h(party_);
+    h.h_w_id = warehouse_id;
+    h.h_d_id = district_id;
+    h.h_c_w_id = c_warehouse_id;
+    h.h_c_d_id = c_district_id;
+    h.h_c_id = customer_id;
+    h.h_amount = h_amount;
+
+    history_.push_back(h)
+    // History* history = insertHistory(h);
+    // if (undo != NULL) {
+    //     (*undo)->inserted(history);
+    // }
+
+    // Zero all the customer fields: avoid uninitialized data for serialization
+}
+
+
+
+void TPCCTables::internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer* c,
+        Integer h_amount,  TPCCUndo** undo) {
+    // if (undo != NULL) {
+    //     allocateUndo(undo);
+    //     (*undo)->save(c);
+    // }
+    c->c_balance -= h_amount;
+    c->c_ytd_payment += h_amount;
+    c->c_payment_cnt += 1;
+
+}
+
+
+
+
+
 
 
 // Allocates an undo buffer if needed, storing the pointer in *undo.
@@ -253,10 +364,6 @@ void allocateUndo(TPCCUndo** undo) {
     }
 }
 
-
-void TPCCDB::insertStock(const Stock& stock){
-    stock_.push_back(stock);
-}
 
 Stock* TPCCDB::findStock(Integer w_id, Integer s_id) {
      

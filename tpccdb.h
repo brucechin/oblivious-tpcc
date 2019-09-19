@@ -52,12 +52,13 @@ void readFloat32(Integer& target, Float32& data, int t_begin, int d_begin, int l
 
 
 class District {
-
-	// int d_id; //primary 
-	// int d_w_id; //primary warehouse id
-	// int d_next_o_id; //next available order number
-	// float d_ytd; // year to date balance
-	// float d_tax;
+public:
+	Integer d_id; //primary 
+	Integer d_w_id; //primary warehouse id
+	Integer d_next_o_id; //next available order number
+	Integer d_ytd; // year to date balance
+	Integer d_tax;
+	int party_;
 	// String d_name;
 	// String d_street_1;
 	// String d_street_2;
@@ -65,210 +66,261 @@ class District {
 	// String d_state;
 	// String d_zip;
 
-public:
-	int party_;
-	Integer data_;
-
-	District(int d_id, int d_w_id, int d_next_o_id, int p){
+	District(int p){
 		party_ = p;
-		Integer id = Integer(INT_LENGTH, d_id, party_);
-		Integer w_id = Integer(INT_LENGTH, d_w_id, party_);
-		Integer next_o_id = Integer(INT_LENGTH, d_next_o_id, party_);
-		Float32 d_ytd = Float32(d_ytd, party_);
-		Float32 d_tax = Float32(d_tax, party_);
-		
-		data_ = new Integer(INT_LENGTH * 3 + FLOAT32_LENGTH * 2, 0, party_);
-		//TODO : use a combine function to simplify a long list of writeIntegers?
-		writeInteger(data_, id, 0, 0, INT_LENGTH);
-		writeInteger(data_, w_id, INT_LENGTH, 0, INT_LENGTH);
-		writeInteger(data_, next_o_id, INT_LENGTH * 2, 0, INT_LENGTH);
-		writeFloat32(data_, d_ytd, INT_LENGTH * 3, 0, FLOAT32_LENGTH);
-		writeFloat32(data_, d_tax, INT_LENGTH * 3 + FLOAT32_LENGTH, 0, FLOAT32_LENGTH);
 	}
+
+	District(int id, int w_id, int next_o_id, int ytd, int tax, int p){
+		party_ = p;
+		d_id = Integer(INT_LENGTH, id, party_);
+		d_w_id = Integer(INT_LENGTH, w_id, party_);
+		d_next_o_id = Integer(INT_LENGTH, next_o_id, party_);
+		d_ytd = Integer(INT_LENGTH, ytd, party_);
+		d_tax = Integer(INT_LENGTH, tax, party_);
+	}
+
+	District(Integer id, Integer w_id, Integer next_o_id, Integer ytd, Integer tax, int p){
+		party_ = p;
+		d_id = id
+		d_w_id = w_id
+		d_next_o_id = next_o_id;
+		d_ytd = ytd;
+		d_tax = tax;
+	}
+
+
+	// District(int d_id, int d_w_id, int d_next_o_id, int d_ytd, int d_tax, int p){
+	// 	party_ = p;
+	// 	Integer id = Integer(INT_LENGTH, d_id, party_);
+	// 	Integer w_id = Integer(INT_LENGTH, d_w_id, party_);
+	// 	Integer next_o_id = Integer(INT_LENGTH, d_next_o_id, party_);
+	// 	Float32 d_ytd = Float32(d_ytd, party_);
+	// 	Float32 d_tax = Float32(d_tax, party_);
+		
+	// 	data_ = new Integer(INT_LENGTH * 3 + FLOAT32_LENGTH * 2, 0, party_);
+	// 	writeInteger(data_, id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, w_id, INT_LENGTH, 0, INT_LENGTH);
+	// 	writeInteger(data_, next_o_id, INT_LENGTH * 2, 0, INT_LENGTH);
+	// 	writeFloat32(data_, d_ytd, INT_LENGTH * 3, 0, FLOAT32_LENGTH);
+	// 	writeFloat32(data_, d_tax, INT_LENGTH * 3 + FLOAT32_LENGTH, 0, FLOAT32_LENGTH);
+	// }
 }
 
 class History {
-
-	// int h_c_id;
-	// int h_c_d_id;
-	// int h_c_w_id;
-	// int h_d_id;
-	// int h_w_id;
-	// Timestamp h_date;
-	// float h_amount;
-	// String h_data;
 public:
 	int party_;
-	Integer data_;
+	Integer h_c_id;
+	Integer h_c_d_id;
+	Integer h_c_w_id;
+	Integer h_d_id;
+	Integer h_w_id;
+	// Timestamp h_date;
+	Integer h_amount;
+	// String h_data;
 
-	History(int cid, int cd_id, int cw_id, int did, int wid, int p){
-		party_ = p;
-		Integer c_id = Integer(INT_LENGTH, cid, party_);
-		Integer c_d_id = Integer(INT_LENGTH, cd_id, party_);
-		Integer c_w_id = Integer(INT_LENGTH, cw_id, party_);
-		Integer d_id = Integer(INT_LENGTH, did, party_);
-		Integer w_id = Integer(INT_LENGTH, wid, party_);
 
-		data_ = new Integer(INT_LENGTH * 5, 0, party_);
-		writeInteger(data_, c_id, 0, 0, INT_LENGTH);
-		writeInteger(data_, c_d_id, INT_LENGTH, 0, INT_LENGTH);
-		writeInteger(data_, c_w_id, INT_LENGTH * 2, 0, INT_LENGTH);
-		writeInteger(data_, d_id, INT_LENGTH * 3, 0, INT_LENGTH);
-		writeInteger(data_, w_id, INT_LENGTH * 4, 0, INT_LENGTH);
 
-	}
+	// History(int cid, int cd_id, int cw_id, int did, int wid, int p){
+	// 	party_ = p;
+	// 	Integer c_id = Integer(INT_LENGTH, cid, party_);
+	// 	Integer c_d_id = Integer(INT_LENGTH, cd_id, party_);
+	// 	Integer c_w_id = Integer(INT_LENGTH, cw_id, party_);
+	// 	Integer d_id = Integer(INT_LENGTH, did, party_);
+	// 	Integer w_id = Integer(INT_LENGTH, wid, party_);
+
+	// 	data_ = new Integer(INT_LENGTH * 5, 0, party_);
+	// 	writeInteger(data_, c_id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, c_d_id, INT_LENGTH, 0, INT_LENGTH);
+	// 	writeInteger(data_, c_w_id, INT_LENGTH * 2, 0, INT_LENGTH);
+	// 	writeInteger(data_, d_id, INT_LENGTH * 3, 0, INT_LENGTH);
+	// 	writeInteger(data_, w_id, INT_LENGTH * 4, 0, INT_LENGTH);
+
+	// }
 
 
 }
 
 struct NewOrderItem {
-    // int32_t i_id;
-    // int32_t ol_supply_w_id;
-    // int32_t ol_quantity;
 public:
 	int party_;
-	Integer data_;
+    Integer i_id;
+    Integer ol_supply_w_id;
+    Integer ol_quantity;
 
-	NewOrderItem(int i_id, int ol_supply_w_id, int ol_quantity, int p){
+	NewOrderItem(int p){
 		party_ = p;
-		Integer id = Integer(INT_LENGTH, i_id, party_);
-		Integer supply_w_id = Integer(INT_LENGTH, ol_supply_w_id, party_);
-		Integer quantity = Integer(INT_LENGTH, ol_quantity, party_);
-
-		data_ = new Integer(INT_LENGTH * 3, 0, party_);
-		writeInteger(data_, id, 0, 0, INT_LENGTH);
-		writeInteger(data_, supply_w_id, 0, 0, INT_LENGTH);
-		writeInteger(data_, quantity, 0, 0, INT_LENGTH);
 	}
 
-	Integer getItemID(){
-
+	NewOrderItem(Integer id, Integer supply_w_id, Integer quantity, int p){
+		party_ = p;
+		i_id = id;
+		ol_supply_w_id = supply_w_id;
+		ol_quantity = quantity;
 	}
 
-	Integer getSupplyWarehouseID(){
-
+	NewOrderItem(int id, int supply_w_id, int quantity, int p){
+		party_ = p;
+		i_id = Integer(INT_LENGTH, id, party_);
+		i_supply_w_id = Integer(INT_LENGTH, supply_w_id, party_);
+		i_quantity = Integer(INT_LENGTH, quantity, party_);
 	}
 
-	Integer getQuantity(){
+	// NewOrderItem(int i_id, int ol_supply_w_id, int ol_quantity, int p){
+	// 	party_ = p;
+	// 	Integer id = Integer(INT_LENGTH, i_id, party_);
+	// 	Integer supply_w_id = Integer(INT_LENGTH, ol_supply_w_id, party_);
+	// 	Integer quantity = Integer(INT_LENGTH, ol_quantity, party_);
 
-	}
+	// 	data_ = new Integer(INT_LENGTH * 3, 0, party_);
+	// 	writeInteger(data_, id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, supply_w_id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, quantity, 0, 0, INT_LENGTH);
+	// }
 
-	
 
 };
 
 class Item {
-
-	// int i_id; // PRIMARY KEY
-	// int i_im_id;
-    // double i_price;
-	// String i_name;
-	// String i_data;
 public:
 	int party_;
-	Integer data_;
+	Integer i_id; // PRIMARY KEY
+	Integer i_im_id;
+    Integer i_price;
+	// String i_name;
+	// String i_data;
 
 	Item(int id, int im_id, float price, int p){
 		party_ = p;
-		Integer id = Integer(INT_LENGTH, id, party_);
-		Integer im_id = Integer(INT_LENGTH, im_id, party_);
-		Float32 price = Float32(price, party_);
-
-		data_ = new Integer(INT_LENGTH * 3, 0, party_);
-		writeInteger(data_, id, 0, 0, INT_LENGTH);
-		writeInteger(data_, im_id, INT_LENGTH, 0, INT_LENGTH);
-		writeFloat32(data_, price, INT_LENGTH * 2, 0, FLOAT32_LENGTH);
+		i_id = Integer(INT_LENGTH, id, party_);
+		i_im_id = Integer(INT_LENGTH, im_id, party_);
+		i_price = Integer(INT_LENGTH, price, party_);
 	}
 
-	Integer getItemID(){
-
+	Item(int p){
+		party_ = p;
 	}
 
-	Integer getItemImID(){
-
+	Item(Integer id, Integer im_id, Integer price, int p){
+		party_ = p;
+		i_id = id;
+		i_im_id = im_id;
+		i_price = price;
 	}
 
-	Float32 getPrice(){
+	// Item(int id, int im_id, float price, int p){
+	// 	party_ = p;
+	// 	Integer id = Integer(INT_LENGTH, id, party_);
+	// 	Integer im_id = Integer(INT_LENGTH, im_id, party_);
+	// 	Float32 price = Float32(price, party_);
 
-	}
+	// 	data_ = new Integer(INT_LENGTH * 3, 0, party_);
+	// 	writeInteger(data_, id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, im_id, INT_LENGTH, 0, INT_LENGTH);
+	// 	writeFloat32(data_, price, INT_LENGTH * 2, 0, FLOAT32_LENGTH);
+	// }
 
 
 }
 
 class NewOrder {
-
-	// int no_w_id; //new order warehouse id
-	// int no_d_id; //new order district id
-	// int no_o_id; //new order id
 public:
 	int party_;
-	Integer data_;
+	Integer no_w_id; //new order warehouse id
+	Integer no_d_id; //new order district id
+	Integer no_o_id; //new order id
 
+
+	NewOrder(int p){
+		party_ = p;
+	}
+
+	NewOrder(Integer w_id, Integer d_id, Integer o_id, int p){
+		no_w_id = w_id;
+		no_d_id = d_id;
+		no_o_id = o_id;
+		party_ = p;
+	}
 	NewOrder(int w_id, int d_id, int o_id, int p){
 		party_ = p;
-		Integer w_id = Integer(INT_LENGTH, w_id, party_);
-		Integer d_id = Integer(INT_LENGTH, d_id, party_);
-		Integer o_id = Integer(INT_LENGTH, o_id, party_);
-
-		data_ = new Integer(INT_LENGTH * 3, 0, party_);
-		writeInteger(data_, w_id, 0, 0, INT_LENGTH);
-		writeInteger(data_, d_id, INT_LENGTH, 0, INT_LENGTH);
-		writeInteger(data_, o_id, INT_LENGTH * 2, 0, INT_LENGTH);
-	}
-
-	Integer getWarehouseID(){
+		no_w_id = Integer(INT_LENGTH, w_id, party_);
+		no_d_id = Integer(INT_LENGTH, d_id, party_);
+		no_o_id = Integer(INT_LENGTH, o_id, party_);
 
 	}
 
-	Integer getDistrictID(){
+	// NewOrder(int w_id, int d_id, int o_id, int p){
+	// 	party_ = p;
+	// 	Integer w_id = Integer(INT_LENGTH, w_id, party_);
+	// 	Integer d_id = Integer(INT_LENGTH, d_id, party_);
+	// 	Integer o_id = Integer(INT_LENGTH, o_id, party_);
 
-	}
+	// 	data_ = new Integer(INT_LENGTH * 3, 0, party_);
+	// 	writeInteger(data_, w_id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, d_id, INT_LENGTH, 0, INT_LENGTH);
+	// 	writeInteger(data_, o_id, INT_LENGTH * 2, 0, INT_LENGTH);
+	// }
 
-	Integer getOrderID(){
-
-	}
 }
 
 class Order {
-
-	// int o_id;
-	// int o_w_id;
-	// int o_d_id;
-	// int o_c_id;
-	// Integer o_carrier_id;
-	// int o_ol_cnt; //count of order lines
-	// int o_all_local;
-	// Timestamp o_entry_d;
 public:
 	int party_;
-	Integer data_;
+	Integer o_id;
+	Integer o_w_id;
+	Integer o_d_id;
+	Integer o_c_id;
+	Integer o_ol_cnt; //count of order lines
+	// int o_all_local;
+	// Timestamp o_entry_d;
+	// Integer o_carrier_id;
 
-	Order(int o_id, int o_w_id, int o_d_id, int o_c_id, int o_ol_cnt, int p){
+	Order(int p){
 		party_ = p;
-		Integer o_id = Integer(INT_LENGTH, o_id, party_);
-		Integer o_w_id = Integer(INT_LENGTH, o_w_id, party_);
-		Integer o_d_id = Integer(INT_LENGTH, o_d_id, party_);
-		Integer o_c_id = Integer(INT_LENGTH, o_c_id, party_);
-		Integer o_ol_cnt = Integer(INT_LENGTH, o_ol_cnt, party_);
-
-		data_ = new Integer(INT_LENGTH * 5, 0, party_);
-		writeInteger(data_, o_id, 0, 0, INT_LENGTH);
-		writeInteger(data_, o_w_id, INT_LENGTH, 0, INT_LENGTH);
-		writeInteger(data_, o_d_id, INT_LENGTH * 2, 0, INT_LENGTH);
-		writeInteger(data_, o_c_id, INT_LENGTH * 3, 0, INT_LENGTH);
-		writeInteger(data_, o_ol_cnt, INT_LENGTH * 4, 0, INT_LENGTH);
 	}
+
+	Order(Integer id, Integer w_id, Integer d_id, Integer c_id, Integer ol_cnt, int p){
+		party_ = p;
+		o_id = id;
+		o_w_id = w_id;
+		o_d_id = d_id;
+		o_c_id = c_id;
+		o_ol_cnt = ol_cnt;
+	}
+	Order(int id, int w_id, int d_id, int c_id, int ol_cnt, int p){
+		party_ = p;
+		o_id = Integer(INT_LENGTH, id, party_);
+		o_w_id = Integer(INT_LENGTH, w_id, party_);
+		o_d_id = Integer(INT_LENGTH, d_id, party_);
+		o_c_id = Integer(INT_LENGTH, c_id, party_);
+		o_ol_cnt = Integer(INT_LENGTH, ol_cnt, party_);
+	}
+
+	// Order(int o_id, int o_w_id, int o_d_id, int o_c_id, int o_ol_cnt, int p){
+	// 	party_ = p;
+	// 	Integer o_id = Integer(INT_LENGTH, o_id, party_);
+	// 	Integer o_w_id = Integer(INT_LENGTH, o_w_id, party_);
+	// 	Integer o_d_id = Integer(INT_LENGTH, o_d_id, party_);
+	// 	Integer o_c_id = Integer(INT_LENGTH, o_c_id, party_);
+	// 	Integer o_ol_cnt = Integer(INT_LENGTH, o_ol_cnt, party_);
+
+	// 	data_ = new Integer(INT_LENGTH * 5, 0, party_);
+	// 	writeInteger(data_, o_id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, o_w_id, INT_LENGTH, 0, INT_LENGTH);
+	// 	writeInteger(data_, o_d_id, INT_LENGTH * 2, 0, INT_LENGTH);
+	// 	writeInteger(data_, o_c_id, INT_LENGTH * 3, 0, INT_LENGTH);
+	// 	writeInteger(data_, o_ol_cnt, INT_LENGTH * 4, 0, INT_LENGTH);
+	// }
 }
 
 class Stock {
 public:
-
-	// int s_i_id; // PRIMARY KEY 2
-	// int s_w_id; // PRIMARY KEY 1 this is the item id
-	// int s_order_cnt;
-	// int s_remote_cnt;
-	// int s_quantity;
-	// float s_ytd;
+	int party_;
+	Integer s_i_id; // PRIMARY KEY 2
+	Integer s_w_id; // PRIMARY KEY 1 this is the item id
+	Integer s_order_cnt;
+	Integer s_remote_cnt;
+	Integer s_quantity;
+	Integer s_ytd;
 	// String s_data;
 	// String s_dist_01;
 	// String s_dist_02;
@@ -281,83 +333,65 @@ public:
 	// String s_dist_09;
 	// String s_dist_10;
 
-	Integer data_;
-	int party_;
-
-	Stock(int s_i_id, int s_w_id, int s_order_cnt, int s_remote_cnt, int s_quantity, float s_ytd, int p){
+	Stock(int p){
 		party_ = p;
-		Integer s_i_id = Integer(INT_LENGTH, s_i_id, party_);
-		Integer s_w_id = Integer(INT_LENGTH, s_w_id, party_);
-		Integer s_order_cnt = Integer(INT_LENGTH, s_order_cnt, party_);
-		Integer s_remote_cnt = Integer(INT_LENGTH, s_remote_cnt, party_);
-		Integer s_quantity = Integer(INT_LENGTH, s_quantity, party_);
-		Integer s_ytd = Float32(s_ytd, party_);
-
-		data_ = new Integer(INT_LENGTH * 6, 0, party_);
-		writeInteger(data_, s_i_id, 0, 0, INT_LENGTH);
-		writeInteger(data_, s_w_id, INT_LENGTH, 0, INT_LENGTH);
-		writeInteger(data_, s_order_cnt, INT_LENGTH * 2, 0, INT_LENGTH);
-		writeInteger(data_, s_remote_cnt, INT_LENGTH * 3, 0, INT_LENGTH);
-		writeInteger(data_, s_quantity, INT_LENGTH * 4, 0, INT_LENGTH);
-		writeInteger(data_, s_ytd, INT_LENGTH * 5, 0, INT_LENGTH);
 	}
 
-	Integer getStockItemID(){
+	Stock(Integer i_id, Integer w_id, Integer order_cnt, Integer remote_cnt, Integer quantity, Integer ytd, int p){
+		party_ = p;
+		s_i_id = i_id;
+		s_w_id = w_id;
+		s_order_cnt = order_cnt;
+		s_remote_cnt = remote_cnt;
+		s_quantity = quantity;
+		s_ytd = ytd;
+	}
 
-	}   
+	Stock(int i_id, int w_id, int order_cnt, int remote_cnt, int quantity, int ytd, int p){
+		party_ = p;
+		s_i_id = Integer(INT_LENGTH, i_id, party_);
+		s_w_id = Integer(INT_LENGTH, w_id, party_);
+		s_order_cnt = Integer(INT_LENGTH, order_cnt, party_);
+		s_remote_cnt = Integer(INT_LENGTH, remote_cnt, party_);
+		s_quantity = Integer(INT_LENGTH, quantity, party_);
+		s_ytd = Integer(INT_LENGTH, ytd, party_);
+	}
 
-	Integer getStockWarehouseID(){
+	// Stock(int s_i_id, int s_w_id, int s_order_cnt, int s_remote_cnt, int s_quantity, float s_ytd, int p){
+	// 	party_ = p;
+	// 	Integer s_i_id = Integer(INT_LENGTH, s_i_id, party_);
+	// 	Integer s_w_id = Integer(INT_LENGTH, s_w_id, party_);
+	// 	Integer s_order_cnt = Integer(INT_LENGTH, s_order_cnt, party_);
+	// 	Integer s_remote_cnt = Integer(INT_LENGTH, s_remote_cnt, party_);
+	// 	Integer s_quantity = Integer(INT_LENGTH, s_quantity, party_);
+	// 	Integer s_ytd = Float32(s_ytd, party_);
 
-	}   
-
-	Integer getStockOrderCnt(){
-
-	}   
-
-	Integer getStockRemoteCnt(){
-
-	}   
-
-	Integer getStockQuantity(){
-
-	}        
-
-	Integer getStockYTD(){
-
-	}  
-
-	void putStockQuantity(Integer q){
-
-	}        
-
-	void putStockOrderCnt(Integer cnt){
-
-	}   
-
-	void putStockYTD(Integer ytd){
-
-	}                       
-
-	void putStockRemoteCnt(Integer remote_cnt){
-
-	}                                                                                                                                                                                                                                                                                                                                                                              
+	// 	data_ = new Integer(INT_LENGTH * 6, 0, party_);
+	// 	writeInteger(data_, s_i_id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, s_w_id, INT_LENGTH, 0, INT_LENGTH);
+	// 	writeInteger(data_, s_order_cnt, INT_LENGTH * 2, 0, INT_LENGTH);
+	// 	writeInteger(data_, s_remote_cnt, INT_LENGTH * 3, 0, INT_LENGTH);
+	// 	writeInteger(data_, s_quantity, INT_LENGTH * 4, 0, INT_LENGTH);
+	// 	writeInteger(data_, s_ytd, INT_LENGTH * 5, 0, INT_LENGTH);
+	// }
 
 }
 
 class Customer {
-
-	// int c_id; //customer id, 3000 per district
-	// int c_d_id; //district id, 20 unique ids
-	// int c_w_id; //warehouse id, 2 * W unique ids
+public:
+	int party_;
+	Integer c_id; //customer id, 3000 per district
+	Integer c_d_id; //district id, 20 unique ids
+	Integer c_w_id; //warehouse id, 2 * W unique ids
 	//above three are primary key
 
-	// int c_payment_cnt;
-	// int c_delivery_cnt;
+	Integer c_payment_cnt;
+	Integer c_delivery_cnt;
 	// Timestamp c_since;
-	// float c_discount;
-	// float c_credit_lim;
-	// float c_balance;
-	// float c_ytd_payment;
+	Integer c_discount;
+	//float c_credit_lim;
+	Integer c_balance;
+	Integer c_ytd_payment;
 	// String c_credit;
 	// String c_last;
 	// String c_first;
@@ -370,43 +404,71 @@ class Customer {
 	// String c_middle;
 	// String c_data;
 
-public:
-	Integer data_;
-	int party_;
 
-	Customer(int c_id, int c_d_id, int c_w_id, int c_payment_cnt, int c_delivery_cnt, 
-			float c_discount, float c_credit_lim, float c_balance, float c_ytd_payment, int p){
+	Customer(int p){
+		party_ = p;
+	}
+
+	Customer(Integer id, Integer d_id, Integer w_id, Integer payment_cnt, Integer delivery_cnt, Integer discount,
+	 		 Integer balance, Integer ytd_payment, int p){
+				party_  = p;
+				c_id = id;
+				c_d_id = d_id;
+				c_w_id = w_id;
+				c_payment_cnt = payment_cnt;
+				c_delivery_cnt = delivery_cnt;
+				c_discount = discount;
+				c_balance = balance;
+				c_ytd_payment = ytd_payment;
+		}
+
+	Customer(int id, int d_id, int w_id, int payment_cnt, int delivery_cnt, 
+			int discount, int balance, int ytd_payment, int p){
 				party_ = p;
-				Integer c_id = Integer(INT_LENGTH, c_id, party_);
-				Integer c_d_id = Integer(INT_LENGTH, c_d_id, party_);
-				Integer c_w_id = Integer(INT_LENGTH, c_w_id, party_);
-				Integer c_payment_cnt = Integer(INT_LENGTH, c_payment_cnt, party_);
-				Integer c_delivery_cnt = Integer(INT_LENGTH, c_delivery_cnt, party_);
-				Float32 c_discount = Float32(c_discount, party_);
-				Float32 c_credit_lim = Float32(c_credit_lim, party_);
-				Float32 c_balance = Float32(c_balance, party_);
-				Float32 c_ytd_payment = Float32(c_ytd_payment, party_);
+				c_id = Integer(INT_LENGTH, id, party_);
+				c_d_id = Integer(INT_LENGTH, d_id, party_);
+				c_w_id = Integer(INT_LENGTH, w_id, party_);
+				c_payment_cnt = Integer(INT_LENGTH, payment_cnt, party_);
+				c_delivery_cnt = Integer(INT_LENGTH, delivery_cnt, party_);
+				c_discount = Integer(INT_LENGTH, discount, party_);
+				c_balance = Integer(INT_LENGTH, balance, party_);
+				c_ytd_payment = Integer(INT_LENGTH, ytd_payment, party_);
+		}
 
-				data_ = new Integer(INT_LENGTH * 5 + FLOAT32_LENGTH * 4, 0, party_);
-				writeInteger(data_, c_id, 0, 0, INT_LENGTH);
-				writeInteger(data_, c_d_id, INT_LENGTH, 0, INT_LENGTH);
-				writeInteger(data_, c_w_id, INT_LENGTH * 2, 0, INT_LENGTH);
-				writeInteger(data_, c_payment_cnt, INT_LENGTH * 3, 0, INT_LENGTH);
-				writeInteger(data_, c_delivery_cnt, INT_LENGTH * 4, 0, INT_LENGTH);
+	// Customer(int c_id, int c_d_id, int c_w_id, int c_payment_cnt, int c_delivery_cnt, 
+	// 		float c_discount, float c_credit_lim, float c_balance, float c_ytd_payment, int p){
+	// 			party_ = p;
+	// 			Integer c_id = Integer(INT_LENGTH, c_id, party_);
+	// 			Integer c_d_id = Integer(INT_LENGTH, c_d_id, party_);
+	// 			Integer c_w_id = Integer(INT_LENGTH, c_w_id, party_);
+	// 			Integer c_payment_cnt = Integer(INT_LENGTH, c_payment_cnt, party_);
+	// 			Integer c_delivery_cnt = Integer(INT_LENGTH, c_delivery_cnt, party_);
+	// 			Float32 c_discount = Float32(c_discount, party_);
+	// 			Float32 c_credit_lim = Float32(c_credit_lim, party_);
+	// 			Float32 c_balance = Float32(c_balance, party_);
+	// 			Float32 c_ytd_payment = Float32(c_ytd_payment, party_);
 
-				writeFloat32(data_, c_discount, INT_LENGTH * 5, 0, FLOAT32_LENGTH);
-				writeFloat32(data_, c_credit_lim, INT_LENGTH * 5 + FLOAT32_LENGTH, 0, FLOAT32_LENGTH);
-				writeFloat32(data_, c_balance, INT_LENGTH * 5 + FLOAT32_LENGTH * 2, 0, FLOAT32_LENGTH);
-				writeFloat32(data_, c_ytd_payment, INT_LENGTH * 5 + FLOAT32_LENGTH * 3, 0, FLOAT32_LENGTH);
-			}
+	// 			data_ = new Integer(INT_LENGTH * 5 + FLOAT32_LENGTH * 4, 0, party_);
+	// 			writeInteger(data_, c_id, 0, 0, INT_LENGTH);
+	// 			writeInteger(data_, c_d_id, INT_LENGTH, 0, INT_LENGTH);
+	// 			writeInteger(data_, c_w_id, INT_LENGTH * 2, 0, INT_LENGTH);
+	// 			writeInteger(data_, c_payment_cnt, INT_LENGTH * 3, 0, INT_LENGTH);
+	// 			writeInteger(data_, c_delivery_cnt, INT_LENGTH * 4, 0, INT_LENGTH);
+
+	// 			writeFloat32(data_, c_discount, INT_LENGTH * 5, 0, FLOAT32_LENGTH);
+	// 			writeFloat32(data_, c_credit_lim, INT_LENGTH * 5 + FLOAT32_LENGTH, 0, FLOAT32_LENGTH);
+	// 			writeFloat32(data_, c_balance, INT_LENGTH * 5 + FLOAT32_LENGTH * 2, 0, FLOAT32_LENGTH);
+	// 			writeFloat32(data_, c_ytd_payment, INT_LENGTH * 5 + FLOAT32_LENGTH * 3, 0, FLOAT32_LENGTH);
+	// 		}
 
 }
 
 class Warehouse {
-
-	// int w_id; // PRIMARY KEY warehouse id
-	// float w_ytd; // year to dat balance
-    // double w_tax;
+public:
+	int party_;
+	Integer w_id; // PRIMARY KEY warehouse id
+	Integer w_ytd; // year to dat balance
+    Integer w_tax;
 	// String w_name;
 	// String w_street_1;
 	// String w_street_2;
@@ -414,86 +476,96 @@ class Warehouse {
 	// String w_state;
 	// String w_zip;
 
-public:
-	Integer data_;
-	int party_;
-
-	Warehouse(int w_id, int w_ytd, float w_tax, int p){
+	Warehouse(int p){
 		party_ = p;
-		Integer w_id = Integer(INT_LENGTH, w_id, party_);
-		Integer w_ytd = Integer(INT_LENGTH, w_ytd, party_);
-		Float32j w_tax = Float32(w_tax, party_);
 	}
+
+	Warehouse(Integer id, Integer ytd, Integer tax, int p){
+		party_ = p;
+		w_id = id;
+		w_ytd = ytd;
+		w_tax = tax;
+	}
+
+	Warehouse(int id, int ytd, float tax, int p){
+		party_ = p;
+		w_id = Integer(INT_LENGTH, id, party_);
+		w_ytd = Integer(INT_LENGTH, ytd, party_);
+		w_tax = Integer(INT_LENGTH, tax, party_);
+	}
+
+
+	// Warehouse(int w_id, int w_ytd, float w_tax, int p){
+	// 	party_ = p;
+	// 	Integer w_id = Integer(INT_LENGTH, w_id, party_);
+	// 	Integer w_ytd = Integer(INT_LENGTH, w_ytd, party_);
+	// 	Float32j w_tax = Float32(w_tax, party_);
+	// }
 }
 
 class OrderLine {
-
-	// int ol_w_id;
-	// int ol_d_id;
-	// int ol_o_id;
-	// int ol_number;
-	// int ol_i_id;
-	// int ol_supply_w_id;
-	// int ol_quantity;
+public:
+	int party_;
+	Integer ol_w_id;
+	Integer ol_d_id;
+	Integer ol_o_id;
+	Integer ol_i_id;
+	Integer ol_supply_w_id;
+	Integer ol_quantity;
 	// Timestamp ol_delivery_d;
-	// float ol_amount;
+	Integer ol_amount;
 	// String ol_dist_info;
 
-public:
-	Integer data_;
-	int party_;
-
-	OrderLine(int ol_w_id, int ol_d_id, int ol_o_id, int ol_number, int ol_i_id, int ol_supply_w_id, int ol_quantity, float ol_amount, int p){
+	OrderLine(int p){
 		party_ = p;
-		Integer ol_w_id = Integer(INT_LENGTH, ol_w_id, party_);
-		Integer ol_d_id = Integer(INT_LENGTH, ol_d_id, party_);
-		Integer ol_o_id = Integer(INT_LENGTH, ol_o_id, party_);
-		Integer ol_i_id = Integer(INT_LENGTH, ol_i_id, party_);
-		Integer ol_number = Integer(INT_LENGTH, ol_i_id, party_);
-		Integer ol_supply_w_id = Integer(INT_LENGTH, ol_supply_w_id, party_);
-		Integer ol_quantity = Integer(INT_LENGTH, ol_quantity, party_);
-		Float32 ol_amount = Float32(ol_amount, party_);
-
-		data_ = new Integer(INT_LENGTH * 7 + FLOAT32_LENGTH, 0, party_);
-
-		writeInteger(data_, ol_w_id, 0, 0, INT_LENGTH);
-		writeInteger(data_, ol_d_id, INT_LENGTH, 0, INT_LENGTH);
-		writeInteger(data_, ol_o_id, INT_LENGTH * 2, 0, INT_LENGTH);
-		writeInteger(data_, ol_i_id, INT_LENGTH * 3, 0, INT_LENGTH);
-		writeInteger(data_, ol_number, INT_LENGTH * 4, 0, INT_LENGTH);
-		writeInteger(data_, ol_supply_w_id, INT_LENGTH * 5, 0, INT_LENGTH);
-		writeInteger(data_, ol_quantity, INT_LENGTH * 6, 0, INT_LENGTH);
-		writeFloat32(data_, ol_amount, INT_LENGTH * 7, 0, FLOAT32_LENGTH);
-
 	}
 
-	Integer getOrderlineOrderID(){
-
+	OrderLine(Integer w_id, Integer d_id, Integer o_id, Integer number, Integer i_id, Integer supply_w_id, Integer quantity, Integer amount, int p){
+		party_ = p;
+		ol_w_id = w_id;
+		ol_d_id = d_id;
+		ol_o_id = o_id;
+		ol_i_id = i_id;
+		ol_supply_w_id = supply_w_id;
+		ol_quantity = quantity;
+		ol_amount = amount;
 	}
 
-	Integer getOrderlineDistrictID(){
-
+	OrderLine(int ol_w_id, int ol_d_id, int ol_o_id, int ol_number, int ol_i_id, int ol_supply_w_id, int ol_quantity, int ol_amount, int p){
+		party_ = p;
+		ol_w_id = Integer(INT_LENGTH, ol_w_id, party_);
+		ol_d_id = Integer(INT_LENGTH, ol_d_id, party_);
+		ol_o_id = Integer(INT_LENGTH, ol_o_id, party_);
+		ol_i_id = Integer(INT_LENGTH, ol_i_id, party_);
+		ol_supply_w_id = Integer(INT_LENGTH, ol_supply_w_id, party_);
+		ol_quantity = Integer(INT_LENGTH, ol_quantity, party_);
+		ol_amount = Integer(INT_LENGTH, ol_amount, party_);
 	}
 
-	Integer getOrderlineWarehouseID(){
+	// OrderLine(int ol_w_id, int ol_d_id, int ol_o_id, int ol_number, int ol_i_id, int ol_supply_w_id, int ol_quantity, float ol_amount, int p){
+	// 	party_ = p;
+	// 	Integer ol_w_id = Integer(INT_LENGTH, ol_w_id, party_);
+	// 	Integer ol_d_id = Integer(INT_LENGTH, ol_d_id, party_);
+	// 	Integer ol_o_id = Integer(INT_LENGTH, ol_o_id, party_);
+	// 	Integer ol_i_id = Integer(INT_LENGTH, ol_i_id, party_);
+	// 	Integer ol_number = Integer(INT_LENGTH, ol_i_id, party_);
+	// 	Integer ol_supply_w_id = Integer(INT_LENGTH, ol_supply_w_id, party_);
+	// 	Integer ol_quantity = Integer(INT_LENGTH, ol_quantity, party_);
+	// 	Float32 ol_amount = Float32(ol_amount, party_);
 
-	}
+	// 	data_ = new Integer(INT_LENGTH * 7 + FLOAT32_LENGTH, 0, party_);
 
-	Integer getOrderlineItemID(){
+	// 	writeInteger(data_, ol_w_id, 0, 0, INT_LENGTH);
+	// 	writeInteger(data_, ol_d_id, INT_LENGTH, 0, INT_LENGTH);
+	// 	writeInteger(data_, ol_o_id, INT_LENGTH * 2, 0, INT_LENGTH);
+	// 	writeInteger(data_, ol_i_id, INT_LENGTH * 3, 0, INT_LENGTH);
+	// 	writeInteger(data_, ol_number, INT_LENGTH * 4, 0, INT_LENGTH);
+	// 	writeInteger(data_, ol_supply_w_id, INT_LENGTH * 5, 0, INT_LENGTH);
+	// 	writeInteger(data_, ol_quantity, INT_LENGTH * 6, 0, INT_LENGTH);
+	// 	writeFloat32(data_, ol_amount, INT_LENGTH * 7, 0, FLOAT32_LENGTH);
 
-	}
+	// }
 
-	void putOrderlineOrderID(Integer o_id){
-
-	}
-
-	void putOrderlineDistrictID(Integer d_id){
-
-	}
-
-	void putOrderlineWarehouseID(Integer w_id){
-
-	}
 }
 
 // Contains data required to undo transactions. Note that only new order, payment, and delivery
@@ -600,49 +672,35 @@ public:
 	void loadNewOrders(string filename);
 
 
-	virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+	virtual bool newOrder(Integer warehouse_id, Integer district_id, Integer customer_id,
             const std::vector<NewOrderItem>& items, TPCCUndo** undo);
-    virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+    virtual bool newOrderHome(Integer warehouse_id, Integer district_id, Integer customer_id,
             const std::vector<NewOrderItem>& items, TPCCUndo** undo);
-    virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
+    virtual bool newOrderRemote(Integer home_warehouse, Integer remote_warehouse,
             const std::vector<NewOrderItem>& items, TPCCUndo** undo);
-	typedef tpcc::Set<int32_t> WarehouseSet;
-    static WarehouseSet newOrderRemoteWarehouses(int32_t home_warehouse, const std::vector<NewOrderItem>& items);
+	typedef tpcc::Set<Integer> WarehouseSet;
+    static WarehouseSet newOrderRemoteWarehouses(Integer home_warehouse, const std::vector<NewOrderItem>& items);
 
-    static const int32_t INVALID_QUANTITY = -1;
-    // Combines valid quantities into output.
+    Item* findItem(Integer i_id);
 
-	// Copies item into the item table.
-    void insertItem(const Item& item);
-    Item* findItem(int32_t i_id);
+    Warehouse* findWarehouse(Integer w_id);
 
-    void insertWarehouse(const Warehouse& warehouse);
-    Warehouse* findWarehouse(int32_t w_id);
+    Stock* findStock(Integer w_id, Integer s_id);
 
-    void insertStock(const Stock& stock);
-    Stock* findStock(int32_t w_id, int32_t s_id);
+    District* findDistrict(Integer w_id, Integer d_id);
 
-    void insertDistrict(const District& district);
-    District* findDistrict(int32_t w_id, int32_t d_id);
-
-    void insertCustomer(const Customer& customer);
-    Customer* findCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
+    Customer* findCustomer(Integer w_id, Integer d_id, Integer c_id);
     // Finds all customers that match (w_id, d_id, *, c_last), taking the n/2th one (rounded up).
 
     // Stores order in the database. Returns a pointer to the database's tuple.
-    Order* insertOrder(const Order& order);
-    Order* findOrder(int32_t w_id, int32_t d_id, int32_t o_id);
+    Order* findOrder(Integer w_id, Integer d_id, Integer o_id);
 
     // Stores orderline in the database. Returns a pointer to the database's tuple.
-    OrderLine* insertOrderLine(const OrderLine& orderline);
-    OrderLine* findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number);
+    OrderLine* findOrderLine(Integer w_id, Integer d_id, Integer o_id, Integer number);
 
     // Creates a new order in the database. Returns a pointer to the database's tuple.
-    NewOrder* insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id);
-    NewOrder* findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id);
+    NewOrder* findNewOrder(Integer w_id, Integer d_id, Integer o_id);
 
-	// Stores order in the database. Returns a pointer to the database's tuple.
-    History* insertHistory(const History& history);
 
 private:
 
