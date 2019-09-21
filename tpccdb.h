@@ -59,6 +59,8 @@ public:
 	Integer d_ytd; // year to date balance
 	Integer d_tax;
 	int party_;
+
+	static const int NUM_PER_WAREHOUSE = 10;
 	// String d_name;
 	// String d_street_1;
 	// String d_street_2;
@@ -118,6 +120,9 @@ public:
 	Integer h_amount;
 	// String h_data;
 
+	History(int p){
+		party_ = p;
+	}
 
 
 	// History(int cid, int cd_id, int cw_id, int did, int wid, int p){
@@ -509,6 +514,7 @@ public:
 	Integer ol_w_id;
 	Integer ol_d_id;
 	Integer ol_o_id;
+	Integer ol_number;
 	Integer ol_i_id;
 	Integer ol_supply_w_id;
 	Integer ol_quantity;
@@ -525,6 +531,7 @@ public:
 		ol_w_id = w_id;
 		ol_d_id = d_id;
 		ol_o_id = o_id;
+		ol_number = number;
 		ol_i_id = i_id;
 		ol_supply_w_id = supply_w_id;
 		ol_quantity = quantity;
@@ -536,6 +543,7 @@ public:
 		ol_w_id = Integer(INT_LENGTH, ol_w_id, party_);
 		ol_d_id = Integer(INT_LENGTH, ol_d_id, party_);
 		ol_o_id = Integer(INT_LENGTH, ol_o_id, party_);
+		ol_number = Integer(INT_LENGTH, ol_number, party_);
 		ol_i_id = Integer(INT_LENGTH, ol_i_id, party_);
 		ol_supply_w_id = Integer(INT_LENGTH, ol_supply_w_id, party_);
 		ol_quantity = Integer(INT_LENGTH, ol_quantity, party_);
@@ -680,6 +688,20 @@ public:
             const std::vector<NewOrderItem>& items, TPCCUndo** undo);
 	typedef tpcc::Set<Integer> WarehouseSet;
     static WarehouseSet newOrderRemoteWarehouses(Integer home_warehouse, const std::vector<NewOrderItem>& items);
+
+	virtual void delivery(Integer warehouse_id, Integer carrier_id, 
+        std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo);
+
+
+	virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, int32_t customer_id, float h_amount, TPCCUndo** undo);
+
+    virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, int32_t c_id, float h_amount, TPCCUndo** undo);
+    virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, int32_t c_id, float h_amount, TPCCUndo** undo);
+    virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, float h_amount, TPCCUndo** undo);
 
     Item* findItem(Integer i_id);
 

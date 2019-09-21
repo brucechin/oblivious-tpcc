@@ -243,6 +243,7 @@ bool TPCCTables::newOrderHome(Integer warehouse_id, Integer district_id, Integer
     line.ol_w_id = warehouse_id;
 
     for (int i = 0; i < items.size(); ++i) {
+        line.ol_number = Integer(INT_LENGTH, i + 1, PUBLIC);
         line.ol_i_id = items[i].i_id;
         line.ol_supply_w_id = items[i].ol_supply_w_id;
         line.ol_quantity = items[i].ol_quantity;
@@ -271,21 +272,10 @@ bool TPCCTables::newOrderHome(Integer warehouse_id, Integer district_id, Integer
 
 
 void TPCCTables::payment(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
-        Integer c_district_id, Integer customer_id, Integer h_amount, const char* now,
-        PaymentOutput* output, TPCCUndo** undo) {
+        Integer c_district_id, Integer customer_id, Integer h_amount,  TPCCUndo** undo) {
     //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now);
     Customer* customer = findCustomer(c_warehouse_id, c_district_id, customer_id);
-    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
-            now, output, undo);
-    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
-}
-
-void TPCCTables::payment(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
-        Integer c_district_id, const char* c_last, Integer h_amount, TPCCUndo** undo) {
-    //~ printf("payment %d %d %d %d %s %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, c_last, h_amount, now);
-    Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
-    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer->c_id, h_amount,
-            now, output, undo);
+    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, undo);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
 }
 
@@ -297,7 +287,7 @@ void TPCCTables::paymentRemote(Integer warehouse_id, Integer district_id, Intege
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount,  undo);
 }
 void TPCCTables::paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
-        Integer c_district_id, const char* c_last, Integer h_amount, TPCCUndo** undo) {
+        Integer c_district_id, Integer h_amount, TPCCUndo** undo) {
     Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, undo);
 }
@@ -353,7 +343,68 @@ void TPCCTables::internalPaymentRemote(Integer warehouse_id, Integer district_id
 
 
 
+void TPCCDB::delivery(Integer warehouse_id, Integer carrier_id, 
+        std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo) {
+    //~ printf("delivery %d %d %s\n", warehouse_id, carrier_id, now);
+    allocateUndo(undo);
+    orders->clear();
 
+    for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; ++d_id) {
+        // Find and remove the lowest numbered order for the district
+        // int64_t key = makeNewOrderKey(warehouse_id, d_id, 1);
+        // NewOrderMap::iterator iterator = neworders_.lower_bound(key);
+        // NewOrder* neworder = NULL;
+        // if (iterator != neworders_.end()) {
+        //     neworder = iterator->second;
+        //     assert(neworder != NULL);
+        // }
+        NewOrder* neworder = findNewOrder(warehouse_id, d_id);
+        if (neworder == NULL || neworder->no_d_id != d_id || neworder->no_w_id != warehouse_id) {
+            // No orders for this district
+            // TODO: 2.7.4.2: If this occurs in max(1%, 1) of transactions, report it (???)
+            continue;
+        }
+        assert(neworder->no_d_id == d_id && neworder->no_w_id == warehouse_id);
+        int32_t o_id = neworder->no_o_id;
+        neworders_.erase(iterator);
+        // if (undo != NULL) {
+        //     (*undo)->deleted(neworder);
+        // } else {
+        //     delete neworder;
+        // }
+
+        DeliveryOrderInfo order;
+        order.d_id = d_id;
+        order.o_id = o_id;
+        orders->push_back(order);
+
+        Order* o = findOrder(warehouse_id, d_id, o_id);
+        assert(o->o_carrier_id == Order::NULL_CARRIER_ID);
+        // if (undo != NULL) {
+        //     (*undo)->save(o);
+        // }
+        o->o_carrier_id = carrier_id;
+
+        //TODO: which party shall I use to encrypt "value"
+        Integer total = Integer(INT_LENGTH, 0, PUBLIC);
+        Integer i = Integer(INT_LENGTH, 1, PUBLIC);
+        while((i <= o->o_ol_cnt).reveal<bool>(PUBLIC)){
+            i = i + Integer(INT_LENGTH, 1, PUBLIC);
+            OrderLine* line = findOrderLine(warehouse_id, d_id, o_id, i);
+            // if (undo != NULL) {
+            //     (*undo)->save(line);
+            // }
+            total = total + line->ol_amount;
+        }
+
+        Customer* c = findCustomer(warehouse_id, d_id, o->o_c_id);
+        // if (undo != NULL) {
+        //     (*undo)->save(c);
+        // }
+        c->c_balance = c->c_balance + total;
+        c->c_delivery_cnt = c->c_delivery_cnt + Integer(INT_LENGTH, 1, PUBLIC);
+    }
+}
 
 
 
@@ -365,18 +416,14 @@ void allocateUndo(TPCCUndo** undo) {
 }
 
 
-Stock* TPCCDB::findStock(Integer w_id, Integer s_id) {
+Stock* TPCCDB::findStock(Integer w_id, Integer i_id) {
      
-    int len = stock_.size();
-    Integer wid_read = Integer(INT_LENGTH, 0, party_);
-    Integer sid_read = Integer(INT_LENGTH, 0, party_);
+    int len = stocks_.size();
     for(int i = 0; i < len; i++){
-        readInteger(*stock_[i], sid_read, 0, 0, INT_LENGTH);
-        readInteger(*stock_[i], wid_read, INT_LENGTH, 0, INT_LENGTH);
-        bool res1 = (sid_read == s_id).reveal(PUBLIC);
-        bool res2 = (wid_read == w_id).reveal(PUBLIC);
+        bool res1 = (stocks_[i]->s_i_id == i_id).reveal(PUBLIC);
+        bool res2 = (stocks_[i]->s_w_id == w_id).reveal(PUBLIC);
         if(res1 && res2){
-            return stock_[i];
+            return stocks_[i];
         }
     }
     return NULL;
@@ -384,31 +431,48 @@ Stock* TPCCDB::findStock(Integer w_id, Integer s_id) {
 
 Warehouse* TPCCDB::findWarehouse(Integer w_id){
     int len = warehouses_.size();
-    Integer wid_read = Integer(INT_LENGTH, 0, party_);
     for(int i = 0; i < len; i++){
-        readInteger(*warehouses_[i], wid_read, 0, 0, INT_LENGTH);
-        if((w_id == wid_read).reveal(PUBLIC)){
-            return warehouse_[i];
+        if((w_id == warehouses_[i]->w_id).reveal(PUBLIC)){
+            return warehouses_[i];
         }
     }
     return NULL;
 }
 
 Customer* TPCCDB::findCustomer(Integer w_id, Integer d_id, Integer c_id){
-    inr len = customers_.size();
-    Integer wid_read = Integer(INT_LENGTH, 0, party_);
-    Integer did_read = Integer(INT_LENGTH, 0, party_);
-    Integer cid_read = Integer(INT_LENGTH, 0, party_);
+    int len = customers_.size();
     for(int i = 0; i < len; i++){
-        readInteger(*customers_[i], cid_read, 0, 0, INT_LENGTH);
-        readInteger(*customers_[i], did_read, INT_LENGTH, 0, INT_LENGTH);
-        readInteger(*customers_[i], wid_read, INT_LENGTH * 2, 0, INT_LENGTH);
-        bool res1 = (w_id == wid_read).reveal(PUBLIC);
-        bool res2 = (d_id == did_read).reveal(PUBLIC);
-        bool res3 = (c_id == cid_read).reveal(PUBLIC);
+        bool res1 = (w_id == customers_[i]->c_w_id).reveal(PUBLIC);
+        bool res2 = (d_id == customers_[i]->c_d_id).reveal(PUBLIC);
+        bool res3 = (c_id == customers_[i]->c_id).reveal(PUBLIC);
         if(res1 && res2 && res3){
             return customers_[i];
         }
     }
     return NULL;
+}
+
+NewOrder* TPCCDB::findNewOrder(Integer w_id, Integer d_id){
+    int len = neworders_.size();
+    for(int i = 0; i < len; i++){
+        bool res1 = (w_id == neworders_[i]->no_w_id);
+        bool res2 = (d_id == neworders_[i]->no_d_id);
+        if(res1 && res2){
+            return neworders_[i];
+        }
+    }
+}
+
+Item* TPCCDB::findItem(Integer id) {
+    int len = items_.size();
+    for(int i = 0; i < len; i++){
+        if((id == items_[i]->i_id).reveal<bool>(PUBLIC)){
+            return items_[i];
+        }
+    }
+}
+
+
+OrderLine* TPCCDB::findOrderLine(Integer w_id, Integer d_id, Integer o_id, Integer number){
+    
 }
