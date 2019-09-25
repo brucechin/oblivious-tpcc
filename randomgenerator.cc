@@ -6,7 +6,7 @@
 #include <cstring>
 #include <ctime>
 
-#include "assert.h"
+
 
 namespace tpcc {
 

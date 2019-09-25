@@ -1,8 +1,7 @@
-#ifndef TPCCCLIENT_H__
-#define TPCCCLIENT_H__
+#pragma once
 
 #include <stdint.h>
-
+#include "tpccdb.h"
 namespace tpcc {
 class RandomGenerator;
 }
@@ -11,8 +10,7 @@ class RandomGenerator;
 
 class TPCCClient{
 public:
-    TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* db, int num_items,
-            int num_warehouses, int districts_per_warehouse, int customers_per_district);
+    TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* db);
     ~TPCCClient();
 
     // void doStockLevel();
@@ -31,4 +29,4 @@ private:
     tpcc::RandomGenerator* generator_;
     TPCCDB* db_;
 
-}
+};

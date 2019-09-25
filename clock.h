@@ -1,5 +1,5 @@
-#ifndef CLOCK_H__
-#define CLOCK_H__
+#pragma once
+
 
 //~ #include <cstdint>
 #include <stdint.h>
@@ -24,5 +24,3 @@ public:
     virtual void getDateTimestamp(char* now);
     virtual int64_t getMicroseconds();
 };
-
-#endif

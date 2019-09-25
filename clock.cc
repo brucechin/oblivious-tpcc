@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <ctime>
 
-#include "assert.h"
+
 
 // Fills output with the base-10 ASCII representation of value, using digits digits.
 static char* makeInt(char* output, int value, int digits) {
@@ -17,14 +17,14 @@ static char* makeInt(char* output, int value, int digits) {
         next -= 1;
         *next = static_cast<char>('0' + digit);
     }
-    assert(value == 0);
+    ASSERT(value == 0);
     return last;
 }
 
 void SystemClock::getDateTimestamp(char* now) {
     // Get the system time. Convert it to local time
     time_t seconds_since_epoch = time(NULL);
-    assert(seconds_since_epoch != -1);
+    ASSERT(seconds_since_epoch != -1);
 
     struct tm local_calendar;
     struct tm* result = localtime_r(&seconds_since_epoch, &local_calendar);
@@ -45,7 +45,7 @@ void SystemClock::getDateTimestamp(char* now) {
     next = makeInt(next, local_calendar.tm_min, 2);
     next = makeInt(next, local_calendar.tm_sec, 2);
     *next = '\0';
-    assert(next == now + DATETIME_SIZE);
+    ASSERT(next == now + DATETIME_SIZE);
 }
 
 int64_t SystemClock::getMicroseconds() {

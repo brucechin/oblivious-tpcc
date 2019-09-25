@@ -1,5 +1,5 @@
-#ifndef RANDOMGENERATOR_H__
-#define RANDOMGENERATOR_H__
+#pragma once
+
 
 #include <cstdlib>  // for struct random_data
 
@@ -80,4 +80,4 @@ private:
 
 }  // namespace tpcc
 
-#endif
+

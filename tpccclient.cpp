@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <vector>
 
-#include "assert.h"
+
 #include "clock.h"
 //#include "randomgenerator.h"
 #include "tpccdb.h"
@@ -12,6 +12,16 @@ TPCCClient::~TPCCClient() {
     delete generator_;
     delete db_;
 }
+
+TPCCClient::TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* d) :
+        clock_(clock),
+        generator_(generator),
+        db_(db) {
+    ASSERT(clock_ != NULL);
+    ASSERT(generator_ != NULL);
+    ASSERT(db_ != NULL);
+}
+
 
 void TPCCClient::doDelivery() {
     int carrier = generator_->number(Order::MIN_CARRIER_ID, Order::MAX_CARRIER_ID);
@@ -76,7 +86,7 @@ bool TPCCClient::doNewOrder() {
 
     bool result = db_->newOrder(
             w_id, generateDistrict(), generateCID(), items,  NULL);
-    assert(result == !rollback);
+    ASSERT(result == !rollback);
     return result;
 }
 
