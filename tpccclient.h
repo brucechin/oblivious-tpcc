@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+#include "clock.h"
+#include "randomgenerator.h"
 #include "tpccdb.h"
 namespace tpcc {
 class RandomGenerator;
@@ -28,5 +30,10 @@ private:
     Clock* clock_;
     tpcc::RandomGenerator* generator_;
     TPCCDB* db_;
+
+    int num_warehouses_ = 2;
+    int remote_item_milli_p_ = 600;
+    static const int MAX_OL_QUANTITY = 10;
+    
 
 };
