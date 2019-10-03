@@ -25,7 +25,6 @@ public:
 
     TPCCDB* db() { return db_; }
 
-private:
     
     Clock* clock_;
     tpcc::RandomGenerator* generator_;

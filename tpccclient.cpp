@@ -30,7 +30,7 @@ void TPCCClient::doPayment() {
     int x = generator_->number(1, 100);
     
     Integer w_id = Integer(INT_LENGTH, generator_->number(1, Warehouse::MAX_WAREHOUSE_NUM), PUBLIC);
-    Integer d_id = Integer(INT_LENGTH, generator_->number(1, District::MAX_DISTRICT_NUM), PUBLIC);
+    Integer d_id = Integer(INT_LENGTH, generator_->number(1, District::NUM_PER_WAREHOUSE), PUBLIC);
 
     Integer c_w_id;
     Integer c_d_id;
@@ -76,7 +76,7 @@ bool TPCCClient::doNewOrder() {
         }
         items[i].ol_quantity = Integer(INT_LENGTH, generator_->number(1, MAX_OL_QUANTITY), PUBLIC);
     }
-    Integer d_id = Integer(INT_LENGTH, generator_->number(1, District::MAX_DISTRICT_NUM), PUBLIC);
+    Integer d_id = Integer(INT_LENGTH, generator_->number(1, District::NUM_PER_WAREHOUSE), PUBLIC);
     Integer c_id = Integer(INT_LENGTH, generator_->number(1, Customer::MAX_CUSTOMER_NUM), PUBLIC);
     bool result = db_->newOrder(w_id, d_id, c_id, items,  NULL);
     return result;

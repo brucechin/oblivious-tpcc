@@ -2,6 +2,7 @@
 #include <typeinfo>
 #include <emp-tool/emp-tool.h>
 #include <emp-sh2pc/emp-sh2pc.h>
+#include <emp-ot/emp-ot.h>
 #include <cstring>
 #include <unordered_map>
 #include <unordered_set>
@@ -11,24 +12,14 @@
 #include<fstream>
 #include<algorithm>
 #include<sstream>
-
+#include<dirent.h>
 using namespace std;
 using namespace emp;
 
 #define INT_LENGTH 32
 
 
-vector<std::string> split(std::string str, char delimiter){
-    vector<std::string> internal;
-    std::stringstream ss(str); // Turn the string into a stream.
-    string tok;
-    
-    while(getline(ss, tok, delimiter)) {
-        internal.push_back(tok);
-    }
-    
-    return internal;  
-}
+
 // void writeInteger(Integer& target, Integer& data, int t_begin, int d_begin, int len){
 // 	ASSERT(t_begin + len < target.length);
 // 	ASSERT(d_begin + len < data.length);
@@ -65,6 +56,8 @@ vector<std::string> split(std::string str, char delimiter){
 
 class District {
 public:
+
+
 	Integer d_id; //primary 
 	Integer d_w_id; //primary warehouse id
 	Integer d_next_o_id; //next available order number
@@ -79,9 +72,19 @@ public:
 	// String d_city;
 	// String d_state;
 	// String d_zip;
+	District(){}
 
 	District(int p){
 		party_ = p;
+	}
+
+	District(const District& d){
+		d_id = d.d_id;
+		d_w_id = d.d_w_id;
+		d_next_o_id = d.d_next_o_id;
+		d_ytd = d.d_ytd;
+		d_tax = d.d_tax;
+		party_ = d.party_;
 	}
 
 	District(Integer id, Integer w_id, Integer next_o_id, Integer ytd, Integer tax, int p){
@@ -91,9 +94,26 @@ public:
 		d_next_o_id = next_o_id;
 		d_ytd = ytd;
 		d_tax = tax;
+		
+	}
+
+	void If(const Bit& select, const District& a) const{
+		
+		d_id.If(select, a.d_id);
+		d_w_id.If(select, a.d_w_id);
+		d_next_o_id.If(select, a.d_next_o_id);
+		d_ytd.If(select, a.d_ytd);
+		d_tax.If(select, a.d_tax);
+
+
+	}
+
+	void print(){
+		cout << d_w_id.reveal<int>(PUBLIC)<< " " << d_id.reveal<int>(PUBLIC) << " " << d_next_o_id.reveal<int>(PUBLIC) << endl;
 	}
 
 };
+
 
 class History {
 public:
@@ -111,6 +131,8 @@ public:
 		party_ = p;
 	}
 
+	History(){}
+
 
 };
 
@@ -121,6 +143,9 @@ public:
     Integer ol_supply_w_id;
     Integer ol_quantity;
 
+	NewOrderItem(){
+
+	}
 	NewOrderItem(int p){
 		party_ = p;
 	}
@@ -134,16 +159,24 @@ public:
 
 
 };
+class table{
 
+	vector<Integer> fields;
+	
+
+}
 class Item {
 public:
+
+	static const int NUM_ITEMS = 100;
+
 	int party_;
 	Integer i_id; // PRIMARY KEY
 	Integer i_im_id;
     Integer i_price;
 	// String i_name;
 	// String i_data;
-
+	Item(){}
 
 	Item(int p){
 		party_ = p;
@@ -166,7 +199,7 @@ public:
 	Integer no_d_id; //new order district id
 	Integer no_o_id; //new order id
 
-
+	NewOrder(){}
 	NewOrder(int p){
 		party_ = p;
 	}
@@ -182,6 +215,9 @@ public:
 
 class Order {
 public:
+	static const int MIN_OL_CNT = 5;
+	static const int MAX_OL_CNT = 15;
+
 	int party_;
 	Integer o_id;
 	Integer o_w_id;
@@ -191,7 +227,7 @@ public:
 	// int o_all_local;
 	// Timestamp o_entry_d;
 	// Integer o_carrier_id;
-
+	Order(){}
 	Order(int p){
 		party_ = p;
 	}
@@ -226,6 +262,7 @@ public:
 	// String s_dist_08;
 	// String s_dist_09;
 	// String s_dist_10;
+	Stock(){}
 
 	Stock(int p){
 		party_ = p;
@@ -246,6 +283,8 @@ public:
 
 class Customer {
 public:
+
+	static const int MAX_CUSTOMER_NUM = 30;
 	int party_;
 	Integer c_id; //customer id, 3000 per district
 	Integer c_d_id; //district id, 20 unique ids
@@ -270,7 +309,7 @@ public:
 	// String c_phone;
 	// String c_middle;
 	// String c_data;
-
+	Customer(){}
 
 	Customer(int p){
 		party_ = p;
@@ -294,6 +333,8 @@ public:
 
 class Warehouse {
 public:
+	static const int MAX_WAREHOUSE_NUM = 2;
+
 	int party_;
 	Integer w_id; // PRIMARY KEY warehouse id
 	Integer w_ytd; // year to dat balance
@@ -304,6 +345,8 @@ public:
 	// String w_city;
 	// String w_state;
 	// String w_zip;
+
+	Warehouse(){}
 
 	Warehouse(int p){
 		party_ = p;
@@ -331,6 +374,8 @@ public:
 	// Timestamp ol_delivery_d;
 	Integer ol_amount;
 	// String ol_dist_info;
+
+	OrderLine(){}
 
 	OrderLine(int p){
 		party_ = p;
@@ -470,7 +515,7 @@ public:
             const std::vector<NewOrderItem>& items, TPCCUndo** undo);
     vector<Integer> newOrderRemoteWarehouses(Integer home_warehouse, const std::vector<NewOrderItem>& items);
 
-	void delivery(Integer warehouse_id, Integer carrier_id, 
+	void delivery(Integer warehouse_id, 
         std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo);
 
 
@@ -478,7 +523,7 @@ public:
             Integer c_district_id, Integer customer_id, Integer h_amount, TPCCUndo** undo);
 
     void paymentHome(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
-            Integer c_district_id, Integer c_id, Integer h_amount, TPCCUndo** undo);
+            Integer c_district_id, Integer customer_id,  Integer h_amount, TPCCUndo** undo);
     void paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
             Integer c_district_id, Integer c_id, Integer h_amount, TPCCUndo** undo);
 
@@ -492,13 +537,16 @@ public:
     Item* findItem(Integer i_id);
 
     Warehouse* findWarehouse(Integer w_id);
+	//void writebackWarehouse(Warehouse w);
 
     Stock* findStock(Integer w_id, Integer s_id);
+	//void writebackStock(Stock s);
 
     District* findDistrict(Integer w_id, Integer d_id);
+	//void writebackDistrict(District d);
 
     Customer* findCustomer(Integer w_id, Integer d_id, Integer c_id);
-
+	//void writebackCustomer(Customer c);
     // Stores order in the database. Returns a pointer to the database's tuple.
     Order* findOrder(Integer w_id, Integer d_id, Integer o_id);
 
