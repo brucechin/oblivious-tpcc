@@ -159,12 +159,7 @@ public:
 
 
 };
-class table{
 
-	vector<Integer> fields;
-	
-
-}
 class Item {
 public:
 

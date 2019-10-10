@@ -12,62 +12,96 @@
 #include<fstream>
 #include<algorithm>
 #include<sstream>
+#include<map>
 #include<dirent.h>
 #include <assert.h>
+#include <thread>
+#include <chrono>
+#include <utility>
 using namespace std;
 using namespace emp;
 
 #define INT_LENGTH 32
 
+
+
+
+
+
 class Tuple{
 public:
     int cols; // number of columns
-    vector<Integer>* elements; //column data
+    Integer* elements; //column data
+
+    Tuple(){}
 
     Tuple(int c){
         cols = c;
-        elements = new vector<Integer>(cols, Integer(INT_LENGTH, 0, PUBLIC));
+        elements = new Integer[cols];
+        //cout << "allocate memory " << c << endl;
     }
 
-    Tuple(vector<Integer>& e){    
+    Tuple(vector<Integer> e){    
         cols = e.size();
-        elements = new vector<Integer>(cols, Integer(INT_LENGTH, 0, PUBLIC));
+        elements = new Integer[cols];
         for(int i = 0; i < cols; i++){
-            (*elements)[i] = e[i];
+            elements[i] = e[i];
         }
     }
 
     ~Tuple(){
-        delete[] elements;
+        delete elements;
     }
 
-    Integer getElement(int index){
-        assert(index >= 0 && index < cols);
+    Integer getElement(int index) const{
+        //assert(index >= 0 && index < cols);
         return elements[index];
     }
 
     void setElement(int index, Integer val){
-        assert(index >= 0 && index < cols);
+        //assert(index >= 0 && index < cols);
         elements[index] = val;
     }
 
     void If(const Bit& select, const Tuple& a) const{
+        //if select is true, replace original tuple elements with a
         for(int i = 0; i < cols; i++){
             elements[i].If(select, a.elements[i]);
         }
     }
-}
+
+    void If(int index, const Bit& select, const Integer target) const{
+        elements[index].If(select, target);
+    }
+
+    void print(){
+
+    }
+};
+
+typedef Tuple History;
+typedef Tuple Order;
+typedef Tuple District;
+typedef Tuple Warehouse;
+typedef Tuple Stock;
+typedef Tuple Customer;
+typedef Tuple OrderLine;
+typedef Tuple NewOrder;
+typedef Tuple Item;
+typedef Tuple NewOrderItem;//warehouse_id, item_id, quantity
+typedef Tuple DeliveryOrderInfo;
+
 
 class Table{
 
 //TODO : it is difficult to support insert/delete fields, which affects all tuples
-
+public:
     vector<Tuple*> tuples; // each Integer represent one element in a row
     vector<string> fields;
     map<string, int> offset; // column name to its offset in fields
     int rows; // number of tuples
     int cols;
-    Table(vector<string>& f){
+    Table(vector<string> f){
         rows = 0;
         cols = f.size();
         fields = f;
@@ -76,7 +110,7 @@ class Table{
         }
     }
 
-    Table(vector<string>& f, vector<Tuple*> t){
+    Table(vector<string> f, vector<Tuple*> t){
         rows = t.size();
         cols = f.size();
         fields = f;
@@ -86,78 +120,36 @@ class Table{
         tuples = t;
     }
 
+    ~Table(){
+        for(int i = 0; i < rows; i++){
+            delete tuples[i];
+        }
+    }
+
     void insertTuple(Tuple* t){
         tuples.push_back(t);
         rows++;
     }
 
-    Tuple* getTupleByPrimaryKey(vector<Integer> keys, vector<string> keyFields);
-
-    bool removeTupleByPrimaryKey(vector<Integer> keys, vector<string> keyFields);
-
-
-}
-
-class TPCCDB{
-public:
-    int party_;
-    int port_;
-    Table* items_;
-    Table* histories_;
-    Table* warehouses_;
-    Table* stocks_;
-    Table* districts_;
-    Table* customers_;
-    Table* orders_;
-    Table* orderlines_;
-    Table* neworders_;
-
-    TPCCDB(int party, int port);
-    ~TPCCDB();
-
-    void loadFromCSV(string fileAlice, string fileBob);
-
-    //due to different csv pattern, it's hard to implement a general load csv API for all tables
-    void loadItems(string fileAlice, string fileBob);
-	void loadHistroy(string fileAlice, string fileBob);
-	void loadWarehouses(string fileAlice, string fileBob);
-	void loadStocks(string fileAlice, string fileBob);
-	void loadDistricts(string fileAlice, string fileBob);
-	void loadCustomers(string fileAlice, string fileBob);
-	void loadOrders(string fileAlice, string fileBob);
-	void loadOrderLines(string fileAlice, string fileBob);
-	void loadNewOrders(string fileAlice, string fileBob);
+    void print(){
+        
+    }
 
 
-    bool newOrder(Integer warehouse_id, Integer district_id, Integer customer_id,
-            const std::vector<NewOrderItem>& items, TPCCUndo** undo);
-    bool newOrderHome(Integer warehouse_id, Integer district_id, Integer customer_id,
-            const std::vector<NewOrderItem>& items, TPCCUndo** undo);
-    bool newOrderRemote(Integer home_warehouse, Integer remote_warehouse,
-            const std::vector<NewOrderItem>& items, TPCCUndo** undo);
-    vector<Integer> newOrderRemoteWarehouses(Integer home_warehouse, const std::vector<NewOrderItem>& items);
+    Tuple* getTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields);
+    
+    bool removeTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields);
 
-	void delivery(Integer warehouse_id, 
-        std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo);
+    void loadFromCSVBatcher(string fileAlice, string fileBob, vector<int> targetColumns, vector<int> scales, int party);
+    //Batcher version has much faster encryption speed, nearly 100x faster
+
+    void loadFromCSV(string fileAlice, string fileBob, vector<int> targetColumns, vector<int> scales, int party);
 
 
-	void payment(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
-            Integer c_district_id, Integer customer_id, Integer h_amount, TPCCUndo** undo);
-
-    void paymentHome(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
-            Integer c_district_id, Integer customer_id,  Integer h_amount, TPCCUndo** undo);
-    void paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
-            Integer c_district_id, Integer c_id, Integer h_amount, TPCCUndo** undo);
-
-	void internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer* c,
-        Integer h_amount,  TPCCUndo** undo);
-
-	bool findAndValidateItems(const vector<NewOrderItem>& items, vector<Item*>* item_tuples);
+};
 
 
-}
-
-TPCCUndo{
+class TPCCUndo{
     public:
     ~TPCCUndo();
 
@@ -225,4 +217,74 @@ private:
     // HistorySet inserted_history_;
 
     // NewOrderDeletedSet deleted_new_orders_;
-}
+};
+
+class TPCCDB{
+public:
+    static const int NUM_ITEMS = 100000;
+    static const int MAX_WAREHOUSE_NUM = 2;
+    static const int DISTRICT_PER_WAREHOUSE = 10;
+    static const int MAX_CUSTOMER_NUM = 3000;
+    static const int MIN_OL_CNT = 5;
+	static const int MAX_OL_CNT = 15;
+
+    int party_;
+    int port_;
+    string dataFilePath = "./test/data/";
+    Table* items_;
+    Table* histories_;
+    Table* warehouses_;
+    Table* stocks_;
+    Table* districts_;
+    Table* customers_;
+    Table* orders_;
+    Table* orderlines_;
+    Table* neworders_;
+
+    // static vector<string> districtFields_{"d_w_id", "d_id", "d_ytd", "d_tax", "d_next_o_id"};
+    // static vector<string> customerFields_{"c_w_id", "c_d_id", "c_id", "c_discount", "c_balance", "c_ytd_payment", "c_payment_cnt", "c_delivery_cnt"};
+    // static vector<string> orderFields_{"o_w_id", "o_d_id", "o_id", "o_c_id", "o_ol_cnt"};
+    // static vector<string> neworderFields_{"no_w_id", "no_d_id", "no_o_id"};
+
+
+    vector<string> districtPrimaryKeyNames_{"d_w_id", "d_id"};
+    vector<string> warehousePrimaryKeyNames_{"w_id"};
+    vector<string> customerPrimaryKeyNames_{"c_w_id", "c_d_id", "c_id"};
+    vector<string> stockPrimaryKeyNames_{"s_w_id", "s_i_id"};
+    vector<string> orderPrimaryKeyNames_{"o_w_id", "o_d_id", "o_id"};
+    vector<string> itemPrimaryKeyNames_{"i_id"};
+    vector<string> orderlinePrimaryKeyNames_{"ol_w_id", "ol_d_id", "ol_o_id", "ol_number"};
+    vector<string> neworderPrimaryKeyNames_{"no_w_id", "no_d_id", "no_o_id"};
+
+    TPCCDB(int party, int port);
+    ~TPCCDB();
+
+    void loadFromCSV(string fileAlice, string fileBob);
+
+    bool newOrder(Integer warehouse_id, Integer district_id, Integer customer_id,
+            const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
+    bool newOrderHome(Integer warehouse_id, Integer district_id, Integer customer_id,
+            const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
+    bool newOrderRemote(Integer home_warehouse, Integer remote_warehouse,
+            const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
+    vector<Integer> newOrderRemoteWarehouses(Integer home_warehouse, const std::vector<NewOrderItem*>& items);
+
+	void delivery(Integer warehouse_id, 
+        std::vector<DeliveryOrderInfo*>* orders, TPCCUndo** undo);
+
+
+	void payment(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+            Integer c_district_id, Integer customer_id, Integer h_amount, TPCCUndo** undo);
+
+    void paymentHome(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+            Integer c_district_id, Integer customer_id,  Integer h_amount, TPCCUndo** undo);
+    void paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
+            Integer c_district_id, Integer c_id, Integer h_amount, TPCCUndo** undo);
+
+	void internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer* c,
+        Integer h_amount,  TPCCUndo** undo);
+
+	bool findAndValidateItems(const vector<NewOrderItem*>& items, vector<Item*>* item_tuples);
+
+
+};

@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "clock.h"
 #include "randomgenerator.h"
-#include "tpccdb.h"
+#include "tpccdb_tmp.h"
 namespace tpcc {
 class RandomGenerator;
 }
@@ -22,7 +22,7 @@ public:
     bool doNewOrder();
 
     void doOne();
-
+    std::thread spawn();
     TPCCDB* db() { return db_; }
 
     
