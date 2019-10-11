@@ -18,13 +18,15 @@
 #include <utility>
 #include "ctpl.h"
 
-
 using namespace emp;
 using namespace std;
 
-static const int NUM_TRANSACTIONS = 10000;
+static const int NUM_TRANSACTIONS = 100;
 
-
+void execute(int id){
+    std::this_thread::sleep_for(std::chrono::milliseconds(id * 10));
+    cout << id << " start new order" << endl;
+}
 
 int main(int argc, char** argv) {
     
@@ -47,45 +49,33 @@ int main(int argc, char** argv) {
     random->setC(cLoad);
 
     cout << "random generator init "<<endl;
-    // Client owns all the parameters
-    TPCCClient client(clock, random, tables);
+    TPCCClient* client = new TPCCClient(clock, random, tables);
     cout << "tpcc client init" <<endl;
 
-
-
+    vector<std::thread*> pool;
     int64_t begin = clock->getMicroseconds();
 
+
     for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-        client.doPayment();
-        io->flush();
+        cout << i << "th transaction start \n\n\n"<<endl;
+        pool.push_back(new std::thread(&TPCCClient::doDelivery, client));
+        
     }
-    
+
+    for(int i = 0; i < NUM_TRANSACTIONS; ++i){
+        pool[i]->join();
+        cout << i << "th txn joins" << endl;
+        
+    }
+    io->flush();
+    delete io;
+    //delete client;
     
 
     int64_t end = clock->getMicroseconds();
     int64_t microseconds = end - begin;
-    printf("not batching %d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
+    printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
            (microseconds + 500)/1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-
-
-    //batching speedup testing
-
-    // begin = clock->getMicroseconds();
-
-    // for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-    //     client.doNewOrderBatch();
-    //     io->flush();
-    // }
-    
-    // delete io;
-
-    // end = clock->getMicroseconds();
-    // microseconds = end - begin;
-    // printf("batching %d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
-    //        (microseconds + 500)/1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-
-
-
 
     return 0;
 }

@@ -96,6 +96,7 @@ class Table{
 
 //TODO : it is difficult to support insert/delete fields, which affects all tuples
 public:
+    //TODO : does there exist oblivious b-tree for searching acceleration?
     vector<Tuple*> tuples; // each Integer represent one element in a row
     vector<string> fields;
     map<string, int> offset; // column name to its offset in fields
@@ -135,6 +136,7 @@ public:
         
     }
 
+    vector<Tuple*> getTuplesByPrimaryKeyBatch(vector<vector<Integer>> keys, const vector<string> keyFields);
 
     Tuple* getTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields);
     
@@ -221,16 +223,16 @@ private:
 
 class TPCCDB{
 public:
-    static const int NUM_ITEMS = 100000;
+    static const int NUM_ITEMS = 100;
     static const int MAX_WAREHOUSE_NUM = 2;
     static const int DISTRICT_PER_WAREHOUSE = 10;
-    static const int MAX_CUSTOMER_NUM = 3000;
+    static const int MAX_CUSTOMER_NUM = 30;
     static const int MIN_OL_CNT = 5;
 	static const int MAX_OL_CNT = 15;
 
     int party_;
     int port_;
-    string dataFilePath = "./test/data/";
+    string dataFilePath = "./test/smalldata/";
     Table* items_;
     Table* histories_;
     Table* warehouses_;
@@ -267,6 +269,13 @@ public:
             const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
     bool newOrderRemote(Integer home_warehouse, Integer remote_warehouse,
             const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
+
+    bool newOrderBatch(Integer warehouse_id, Integer district_id, Integer customer_id,
+            const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
+    bool newOrderHomeBatch(Integer warehouse_id, Integer district_id, Integer customer_id,
+            const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
+    bool newOrderRemoteBatch(Integer home_warehouse, Integer remote_warehouse,
+            const std::vector<NewOrderItem*>& items, TPCCUndo** undo);
     vector<Integer> newOrderRemoteWarehouses(Integer home_warehouse, const std::vector<NewOrderItem*>& items);
 
 	void delivery(Integer warehouse_id, 
@@ -284,7 +293,9 @@ public:
 	void internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer* c,
         Integer h_amount,  TPCCUndo** undo);
 
-	bool findAndValidateItems(const vector<NewOrderItem*>& items, vector<Item*>* item_tuples);
+	bool findAndValidateItems(const vector<NewOrderItem*>& items, vector<Item*>& item_tuples);
+
+    bool findAndValidateItemsBatch(const vector<NewOrderItem*>& items, vector<Item*>& item_tuples);
 
 
 };
