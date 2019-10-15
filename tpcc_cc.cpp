@@ -21,7 +21,7 @@
 using namespace emp;
 using namespace std;
 
-static const int NUM_TRANSACTIONS = 100;
+static const int NUM_TRANSACTIONS = 5;
 
 void execute(int id){
     std::this_thread::sleep_for(std::chrono::milliseconds(id * 10));
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 
     for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
         cout << i << "th transaction start \n\n\n"<<endl;
-        pool.push_back(new std::thread(&TPCCClient::doDelivery, client));
+        pool.push_back(new std::thread(&TPCCClient::doPayment, client));
         
     }
 

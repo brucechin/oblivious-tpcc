@@ -140,6 +140,7 @@ vector<Tuple*> Table::getTuplesByPrimaryKeyBatch(vector<vector<Integer>> keys, c
     for(int i = 0; i < keyFields.size(); i++){
         keysOffset.push_back(offset[keyFields[i]]);
     }
+    cout << "batch size : " << keys.size() << endl;
     for(int i = 0; i < rows; i++){
         
         Tuple* t = tuples[i];
@@ -148,15 +149,18 @@ vector<Tuple*> Table::getTuplesByPrimaryKeyBatch(vector<vector<Integer>> keys, c
         //     res = res & (keys[j] == (*t->elements)[keysOffset[j]]);
         // }  
         // output->If(res, *t);
-        bool res = true;
+        
         for(int k = 0; k < keys.size(); k++){
+            bool res = true;
             for(int j = 0; j < keys[k].size(); j++){
                 //cout << t->elements[keysOffset[j]].reveal<int>(PUBLIC) << " ";
                 res = res && ((keys[k][j] == t->elements[keysOffset[j]]).reveal<bool>(PUBLIC));
             }
             if(res){
-                cout << "find one : " << endl;
+                //cout << "find one : " << endl;
                 output.push_back(t);
+                keys.erase(keys.begin() + k);
+                continue;
             }
         }
     }
@@ -175,8 +179,9 @@ Tuple* Table::getTupleByPrimaryKey(vector<Integer> keys, const vector<string> ke
         keysOffset.push_back(offset[keyFields[i]]);
     }
     //cout << "table has " << rows << " rows" << endl;
+    cout << std::this_thread::get_id() << "  reading" << endl;
     for(int i = 0; i < rows; i++){
-        
+        std::shared_lock lock(mutexes_[i]);
         Tuple* t = tuples[i];
         // Bit res = Bit(true, PUBLIC);
         // for(int j = 0; j < keys.size(); j++){
@@ -185,10 +190,10 @@ Tuple* Table::getTupleByPrimaryKey(vector<Integer> keys, const vector<string> ke
         // output->If(res, *t);
         bool res = true;
         
-        for(int j = 0; j < keys.size(); j++){
-            //cout << t->elements[keysOffset[j]].reveal<int>(PUBLIC) << " ";
-            res = res && (keys[j] == t->elements[keysOffset[j]]).reveal<bool>(PUBLIC);
-        }
+        // for(int j = 0; j < keys.size(); j++){
+        //     //cout << t->elements[keysOffset[j]].reveal<int>(PUBLIC) << " ";
+        //     res = res && (keys[j] == t->elements[keysOffset[j]]).reveal<bool>(PUBLIC);
+        // }
         if(res){
             output = t;
         }
@@ -343,14 +348,15 @@ void TPCCDB::loadFromCSV(string fileAlice, string fileBob){
 bool TPCCDB::findAndValidateItemsBatch(const vector<NewOrderItem*>& items,
         vector<Item*>& item_tuples) {
     // CHEAT: Validate all items to see if we will need to abort
-    cout << "item size" << items.size()<<endl;
+    cout << "item size " << items.size()<<endl;
     std::vector<vector<Integer>> itemKeys;
-    for(int i = 0; i < items.size();){
+    for(int i = 0; i < items.size(); i++){
         itemKeys.push_back(vector<Integer>({items[i]->getElement(1)}));
     }
-
     vector<Item*> out = items_->getTuplesByPrimaryKeyBatch(itemKeys, itemPrimaryKeyNames_);
-
+    for(int i = 0; i < out.size(); i++){
+        item_tuples[i] = out[i];
+    }
     return true;
 }
 
@@ -476,9 +482,10 @@ bool TPCCDB::newOrderHomeBatch(Integer warehouse_id, Integer district_id, Intege
     for(int i = 0; i < items.size(); i++){
         item_tuples.push_back(new Item(3));
     }
-    if (!findAndValidateItems(items, item_tuples)) {
+    if (!findAndValidateItemsBatch(items, item_tuples)) {
         return false;
     }
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     cout << "find and validate items : " <<elapsed.count() <<endl;

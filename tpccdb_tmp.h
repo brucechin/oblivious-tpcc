@@ -16,7 +16,10 @@
 #include<dirent.h>
 #include <assert.h>
 #include <thread>
+#include <boost/thread/shared_mutex.hpp>
 #include <chrono>
+#include <mutex>
+#include <shared_mutex>
 #include <utility>
 using namespace std;
 using namespace emp;
@@ -99,6 +102,7 @@ public:
     //TODO : does there exist oblivious b-tree for searching acceleration?
     vector<Tuple*> tuples; // each Integer represent one element in a row
     vector<string> fields;
+    vector<std::shared_mutex> mutexes_;
     map<string, int> offset; // column name to its offset in fields
     int rows; // number of tuples
     int cols;
@@ -118,6 +122,7 @@ public:
         for(int i = 0; i < fields.size(); i++){
             offset[fields[i]] = i;
         }
+        mutexes_ = vector<std::shared_mutex>(cols);
         tuples = t;
     }
 

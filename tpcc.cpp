@@ -22,7 +22,7 @@
 using namespace emp;
 using namespace std;
 
-static const int NUM_TRANSACTIONS = 10000;
+static const int NUM_TRANSACTIONS = 3;
 
 
 
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     int64_t begin = clock->getMicroseconds();
 
     for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-        client.doPayment();
+        client.doNewOrder();
         io->flush();
     }
     
@@ -70,19 +70,19 @@ int main(int argc, char** argv) {
 
     //batching speedup testing
 
-    // begin = clock->getMicroseconds();
+    begin = clock->getMicroseconds();
 
-    // for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-    //     client.doNewOrderBatch();
-    //     io->flush();
-    // }
+    for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
+        client.doNewOrderBatch();
+        io->flush();
+    }
     
-    // delete io;
+    delete io;
 
-    // end = clock->getMicroseconds();
-    // microseconds = end - begin;
-    // printf("batching %d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
-    //        (microseconds + 500)/1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
+    end = clock->getMicroseconds();
+    microseconds = end - begin;
+    printf("batching %d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
+           (microseconds + 500)/1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
 
 
 
