@@ -21,7 +21,7 @@
 using namespace emp;
 using namespace std;
 
-static const int NUM_TRANSACTIONS = 5;
+static const int NUM_TRANSACTIONS = 10;
 
 void execute(int id){
     std::this_thread::sleep_for(std::chrono::milliseconds(id * 10));
@@ -52,18 +52,17 @@ int main(int argc, char** argv) {
     TPCCClient* client = new TPCCClient(clock, random, tables);
     cout << "tpcc client init" <<endl;
 
-    vector<std::thread*> pool;
+    vector<std::thread> pool;
     int64_t begin = clock->getMicroseconds();
-
 
     for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
         cout << i << "th transaction start \n\n\n"<<endl;
-        pool.push_back(new std::thread(&TPCCClient::doPayment, client));
+        pool.push_back(std::thread(&TPCCClient::doPayment, client));
         
     }
 
     for(int i = 0; i < NUM_TRANSACTIONS; ++i){
-        pool[i]->join();
+        pool[i].join();
         cout << i << "th txn joins" << endl;
         
     }

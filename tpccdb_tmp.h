@@ -35,8 +35,11 @@ class Tuple{
 public:
     int cols; // number of columns
     Integer* elements; //column data
-
-    Tuple(){}
+    string name = "default";
+    Tuple(){
+        cols = 0;
+        //cout << "default constructor " << cols <<endl;
+    }
 
     Tuple(int c){
         cols = c;
@@ -52,8 +55,34 @@ public:
         }
     }
 
+    Tuple(const Tuple& t){
+        cols = t.cols;
+        elements = new Integer[cols];
+        //TODO use memcpy instead
+        for(int i = 0; i < cols; i++){
+            elements[i] = t.elements[i];
+        }
+        //cout << "copy constructor cols : " << cols <<endl;
+    }
+
+    Tuple& operator= (const Tuple& t){
+        if(cols > 0){
+            delete[] elements;//release previous dynamic memory
+        }
+        
+        cols = t.cols;
+        elements = new Integer[cols];
+        for(int i = 0; i < cols; i++){
+            elements[i] = t.elements[i];
+        }
+        //cout << "assignment cols : " << cols <<endl;
+    }
+
     ~Tuple(){
-        delete elements;
+        //cout << name << " deconstructor cols:" << cols << endl;
+        if(cols > 0){
+            delete[] elements;
+        }
     }
 
     Integer getElement(int index) const{
@@ -66,11 +95,9 @@ public:
         elements[index] = val;
     }
 
-    void If(const Bit& select, const Tuple& a) const{
+    void If(const Bit& select, const Tuple& a){
         //if select is true, replace original tuple elements with a
-        for(int i = 0; i < cols; i++){
-            elements[i].If(select, a.elements[i]);
-        }
+        *this = a;
     }
 
     void If(int index, const Bit& select, const Integer target) const{
@@ -143,7 +170,7 @@ public:
 
     vector<Tuple*> getTuplesByPrimaryKeyBatch(vector<vector<Integer>> keys, const vector<string> keyFields);
 
-    Tuple* getTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields);
+    Tuple getTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields);
     
     bool removeTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields);
 
@@ -228,16 +255,16 @@ private:
 
 class TPCCDB{
 public:
-    static const int NUM_ITEMS = 100;
+    static const int NUM_ITEMS = 100000;
     static const int MAX_WAREHOUSE_NUM = 2;
     static const int DISTRICT_PER_WAREHOUSE = 10;
-    static const int MAX_CUSTOMER_NUM = 30;
+    static const int MAX_CUSTOMER_NUM = 3000;
     static const int MIN_OL_CNT = 5;
 	static const int MAX_OL_CNT = 15;
 
     int party_;
     int port_;
-    string dataFilePath = "./test/smalldata/";
+    string dataFilePath = "./test/data/";
     Table* items_;
     Table* histories_;
     Table* warehouses_;
@@ -295,12 +322,12 @@ public:
     void paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
             Integer c_district_id, Integer c_id, Integer h_amount, TPCCUndo** undo);
 
-	void internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer* c,
+	void internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer c,
         Integer h_amount,  TPCCUndo** undo);
 
-	bool findAndValidateItems(const vector<NewOrderItem*>& items, vector<Item*>& item_tuples);
+	bool findAndValidateItems(const vector<NewOrderItem*>& items, vector<Item>& item_tuples);
 
-    bool findAndValidateItemsBatch(const vector<NewOrderItem*>& items, vector<Item*>& item_tuples);
+    bool findAndValidateItemsBatch(const vector<NewOrderItem*>& items, vector<Item>& item_tuples);
 
 
 };

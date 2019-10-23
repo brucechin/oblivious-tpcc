@@ -170,35 +170,34 @@ vector<Tuple*> Table::getTuplesByPrimaryKeyBatch(vector<vector<Integer>> keys, c
 }
 
 
-Tuple* Table::getTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields){
-    Tuple* output = new Tuple(10);
+Tuple Table::getTupleByPrimaryKey(vector<Integer> keys, const vector<string> keyFields){
+    Tuple output;
     vector<int> keysOffset;
-    //print(keys);
     //cout << res << endl;
     for(int i = 0; i < keyFields.size(); i++){
         keysOffset.push_back(offset[keyFields[i]]);
     }
-    //cout << "table has " << rows << " rows" << endl;
-    cout << std::this_thread::get_id() << "  reading" << endl;
+    cout << "table has " << rows << " rows" << endl;
+    //cout << std::this_thread::get_id() << "  reading" << endl;
     for(int i = 0; i < rows; i++){
-        std::shared_lock lock(mutexes_[i]);
-        Tuple* t = tuples[i];
-        // Bit res = Bit(true, PUBLIC);
+        //cout << std::this_thread::get_id() << "aquired read lock" <<endl;
+        Tuple t = Tuple(*tuples[i]);
+
+        Bit res = Bit(true, PUBLIC);
+        for(int j = 0; j < keys.size(); j++){
+            res = res & (keys[j] == (t.elements)[keysOffset[j]]);
+        }  
+        output.If(res, t);
+        // bool res = true;
         // for(int j = 0; j < keys.size(); j++){
-        //     res = res & (keys[j] == (*t->elements)[keysOffset[j]]);
-        // }  
-        // output->If(res, *t);
-        bool res = true;
-        
-        // for(int j = 0; j < keys.size(); j++){
-        //     //cout << t->elements[keysOffset[j]].reveal<int>(PUBLIC) << " ";
-        //     res = res && (keys[j] == t->elements[keysOffset[j]]).reveal<bool>(PUBLIC);
+        //     //cout << tmp->elements[keysOffset[j]].reveal<int>(PUBLIC) << " " <<keys[j].reveal<int>(PUBLIC) <<endl;
+        //     res = res && (keys[j] == tmp->elements[keysOffset[j]]).reveal<bool>(PUBLIC);
         // }
-        if(res){
-            output = t;
-        }
+        // if(res){
+        //     output = Tuple(*tuples[i]);
+        //     cout << output.elements << " " << tuples[i]->elements <<endl;
+        // }
     }
-    //cout << endl;
     return output;
 }
 
@@ -241,7 +240,7 @@ void Table::loadFromCSVBatcher(string fileAlice, string fileBob, vector<int> tar
     std::string line;
     // cout << "start reading items " << endl;
     // cout << fileAlice <<  " " << fileBob << endl;
-    // cout << lenAlice << " " << lenBob <<endl;
+    cout << lenAlice << " " << lenBob <<endl;
     //print(targetColumns);
     Batcher batcherAlice, batcherBob;
     for(int i = 0; i < lenAlice; i++)
@@ -346,7 +345,7 @@ void TPCCDB::loadFromCSV(string fileAlice, string fileBob){
 }
 
 bool TPCCDB::findAndValidateItemsBatch(const vector<NewOrderItem*>& items,
-        vector<Item*>& item_tuples) {
+        vector<Item>& item_tuples) {
     // CHEAT: Validate all items to see if we will need to abort
     cout << "item size " << items.size()<<endl;
     std::vector<vector<Integer>> itemKeys;
@@ -355,24 +354,20 @@ bool TPCCDB::findAndValidateItemsBatch(const vector<NewOrderItem*>& items,
     }
     vector<Item*> out = items_->getTuplesByPrimaryKeyBatch(itemKeys, itemPrimaryKeyNames_);
     for(int i = 0; i < out.size(); i++){
-        item_tuples[i] = out[i];
+        item_tuples[i] = *(out[i]);
     }
     return true;
 }
 
 
 bool TPCCDB::findAndValidateItems(const vector<NewOrderItem*>& items,
-        vector<Item*>& item_tuples) {
+        vector<Item>& item_tuples) {
     // CHEAT: Validate all items to see if we will need to abort
     item_tuples.resize(items.size());
     //cout << "item size" << items.size()<<endl;
 
     for (int i = 0; i < items.size(); ++i) {
         item_tuples[i] = items_->getTupleByPrimaryKey(vector<Integer>({items[i]->getElement(1)}), itemPrimaryKeyNames_);
-        if (item_tuples[i] == nullptr) {
-            cout << "wrong item!!!!"<<endl;
-            return false;
-        }
     }
     return true;
 }
@@ -424,7 +419,7 @@ bool TPCCDB::newOrderRemoteBatch(Integer home_warehouse, Integer remote_warehous
 bool TPCCDB::newOrderRemote(Integer home_warehouse, Integer remote_warehouse,
         const vector<NewOrderItem*>& items, TPCCUndo** undo) {
     // Validate all the items: needed so that we don't need to undo in order to execute this
-    vector<Item*> item_tuples;
+    vector<Item> item_tuples;
     if (!findAndValidateItems(items, item_tuples)) {
         return false;
     }
@@ -439,25 +434,25 @@ bool TPCCDB::newOrderRemote(Integer home_warehouse, Integer remote_warehouse,
             continue;
         }
         // update stock
-        Stock* stock = stocks_->getTupleByPrimaryKey(vector<Integer>({items[i]->getElement(0), items[i]->getElement(1)}), stockPrimaryKeyNames_);
+        Stock stock = stocks_->getTupleByPrimaryKey(vector<Integer>({items[i]->getElement(0), items[i]->getElement(1)}), stockPrimaryKeyNames_);
         // if (undo != nullptr) {
         //     (*undo)->save(stock);
         // }
 
-        Integer stock_quantity = stock->getElement(stocks_->offset["s_quantity"]);
+        Integer stock_quantity = stock.getElement(stocks_->offset["s_quantity"]);
         Integer item_ol_quantity = items[i]->getElement(items_->offset["ol_quantity"]);
 
 
         Bit cmp = (stock_quantity >= item_ol_quantity + Integer(INT_LENGTH, 10, PUBLIC));
-        stock->setElement(stocks_->offset["s_quantity"], stock_quantity - item_ol_quantity + Integer(INT_LENGTH, 91, PUBLIC));
-        stock->If(stocks_->offset["s_quantity"], cmp, stock_quantity - item_ol_quantity);
+        stock.setElement(stocks_->offset["s_quantity"], stock_quantity - item_ol_quantity + Integer(INT_LENGTH, 91, PUBLIC));
+        stock.If(stocks_->offset["s_quantity"], cmp, stock_quantity - item_ol_quantity);
 
-        stock->setElement(stocks_->offset["s_ytd"], stock->getElement(stocks_->offset["s_ytd"]) + item_tuples[i]->getElement(items_->offset["i_price"]) * items[i]->getElement(2));
-        stock->setElement(stocks_->offset["s_order_cnt"], stock->getElement(stocks_->offset["s_order_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
+        stock.setElement(stocks_->offset["s_ytd"], stock.getElement(stocks_->offset["s_ytd"]) + item_tuples[i].getElement(items_->offset["i_price"]) * items[i]->getElement(2));
+        stock.setElement(stocks_->offset["s_order_cnt"], stock.getElement(stocks_->offset["s_order_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
 
         //newOrderHome calls newOrderRemote, so this is needed
         if ((items[i]->getElement(0) != home_warehouse).reveal<bool>(PUBLIC)) {
-            stock->setElement(stocks_->offset["s_remote_cnt"], stock->getElement(stocks_->offset["s_remote_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
+            stock.setElement(stocks_->offset["s_remote_cnt"], stock.getElement(stocks_->offset["s_remote_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
         }
     }
 
@@ -469,18 +464,18 @@ bool TPCCDB::newOrderHomeBatch(Integer warehouse_id, Integer district_id, Intege
 
     // read those values first
     auto allStart = std::chrono::high_resolution_clock::now();
-    District* d = districts_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id}), districtPrimaryKeyNames_);
+    District d = districts_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id}), districtPrimaryKeyNames_);
     
-    //cout << "find district "<< d->getElement(1).reveal<int>(PUBLIC) <<endl;
+    //cout << "find district "<< d.getElement(1).reveal<int>(PUBLIC) <<endl;
 
     
-    Customer* c = customers_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id, customer_id}), customerPrimaryKeyNames_);
+    Customer c = customers_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id, customer_id}), customerPrimaryKeyNames_);
     // CHEAT: Validate all items to see if we will need to abort
 
     auto start = std::chrono::high_resolution_clock::now();
-    vector<Item*> item_tuples;
+    vector<Item> item_tuples;
     for(int i = 0; i < items.size(); i++){
-        item_tuples.push_back(new Item(3));
+        item_tuples.push_back(Item(3));
     }
     if (!findAndValidateItemsBatch(items, item_tuples)) {
         return false;
@@ -498,11 +493,11 @@ bool TPCCDB::newOrderHomeBatch(Integer warehouse_id, Integer district_id, Intege
     // if (undo != nullptr) {
     //     (*undo)->save(d);
     // }
-    Integer tmp = d->getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC);
+    Integer tmp = d.getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC);
     //cout << "next order id is increased to : " <<tmp.reveal<int>(PUBLIC) << endl;
-    d->setElement(districts_->offset["d_next_o_id"], d->getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC));
-    Warehouse* w = warehouses_->getTupleByPrimaryKey(vector<Integer>({warehouse_id}), warehousePrimaryKeyNames_);
-    Tuple* order = new Tuple(vector<Integer>({warehouse_id, district_id, d->getElement(districts_->offset["d_next_o_id"]), customer_id, Integer(INT_LENGTH, items.size(), PUBLIC)}));
+    d.setElement(districts_->offset["d_next_o_id"], d.getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC));
+    Warehouse w = warehouses_->getTupleByPrimaryKey(vector<Integer>({warehouse_id}), warehousePrimaryKeyNames_);
+    Tuple* order = new Tuple(vector<Integer>({warehouse_id, district_id, d.getElement(districts_->offset["d_next_o_id"]), customer_id, Integer(INT_LENGTH, items.size(), PUBLIC)}));
     orders_->insertTuple(order);
     Tuple* neworder = new Tuple(vector<Integer>({warehouse_id, district_id, order->getElement(orders_->offset["o_id"])}));
     neworders_->insertTuple(neworder);
@@ -526,10 +521,10 @@ bool TPCCDB::newOrderHomeBatch(Integer warehouse_id, Integer district_id, Intege
     for(int i = 0; i < targetStocks.size(); i++){
         targetStocks[i]->setElement(stocks_->offset["s_quantity"], targetStocks[i]->getElement(stocks_->offset["s_quantity"]) - items[i]->getElement(2));
         targetStocks[i]->setElement(stocks_->offset["s_order_cnt"], targetStocks[i]->getElement(stocks_->offset["s_order_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
-        targetStocks[i]->setElement(stocks_->offset["s_ytd"], targetStocks[i]->getElement(stocks_->offset["s_ytd"]) + items[i]->getElement(2) * item_tuples[i]->getElement(items_->offset["i_price"]));
+        targetStocks[i]->setElement(stocks_->offset["s_ytd"], targetStocks[i]->getElement(stocks_->offset["s_ytd"]) + items[i]->getElement(2) * item_tuples[i].getElement(items_->offset["i_price"]));
         Tuple* orderline = new Tuple(vector<Integer>({warehouse_id, district_id, order->getElement(orders_->offset["o_id"]),
                                                         Integer(INT_LENGTH, i + 1, PUBLIC), items[i]->getElement(1), items[i]->getElement(2),
-                                                        items[i]->getElement(0), items[i]->getElement(2) * item_tuples[i]->getElement(items_->offset["i_price"])}));
+                                                        items[i]->getElement(0), items[i]->getElement(2) * item_tuples[i].getElement(items_->offset["i_price"])}));
         orderlines_->insertTuple(orderline);
         //OrderLine* ol = insertOrderLine(line);
         // if (undo != nullptr) {
@@ -550,20 +545,20 @@ bool TPCCDB::newOrderHome(Integer warehouse_id, Integer district_id, Integer cus
         const vector<NewOrderItem*>& items, TPCCUndo** undo) {
     cout << "start new order home " <<endl;
     // read those values first
-    District* d = districts_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id}), districtPrimaryKeyNames_);
+    District d = districts_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id}), districtPrimaryKeyNames_);
     
-    //cout << "find district "<< d->getElement(1).reveal<int>(PUBLIC) <<endl;
+    //cout << "find district "<< d.getElement(1).reveal<int>(PUBLIC) <<endl;
     //d->print();
 
     
-    Customer* c = customers_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id, customer_id}), customerPrimaryKeyNames_);
+    Customer c = customers_->getTupleByPrimaryKey(vector<Integer>({warehouse_id, district_id, customer_id}), customerPrimaryKeyNames_);
     //cout << "find customer " << customer_id.reveal<int>(PUBLIC)<<endl;
     // CHEAT: Validate all items to see if we will need to abort
     //TODO here may be the segmentation fault
 
-    vector<Item*> item_tuples;
+    vector<Item> item_tuples;
     for(int i = 0; i < items.size(); i++){
-        item_tuples.push_back(new Item(3));
+        item_tuples.push_back(Item(3));
     }
     if (!findAndValidateItems(items, item_tuples)) {
         return false;
@@ -579,14 +574,14 @@ bool TPCCDB::newOrderHome(Integer warehouse_id, Integer district_id, Integer cus
     // }
     //cout <<"next order id offset is :" <<districts_->offset["d_next_o_id"] << endl;
     //cout << "district Tuple cols : " << d->cols <<endl;
-    //cout << "next oreder id is : " << d->getElement(districts_->offset["d_next_o_id"]).reveal<int>(PUBLIC) <<endl;
-    Integer tmp = d->getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC);
+    //cout << "next oreder id is : " << d.getElement(districts_->offset["d_next_o_id"]).reveal<int>(PUBLIC) <<endl;
+    Integer tmp = d.getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC);
     //cout << "next order id is increased to : " <<tmp.reveal<int>(PUBLIC) << endl;
-    d->setElement(districts_->offset["d_next_o_id"], d->getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC));
+    d.setElement(districts_->offset["d_next_o_id"], d.getElement(districts_->offset["d_next_o_id"]) + Integer(INT_LENGTH, 1, PUBLIC));
     cout << "next order id increased" <<endl;
-    Warehouse* w = warehouses_->getTupleByPrimaryKey(vector<Integer>({warehouse_id}), warehousePrimaryKeyNames_);
+    Warehouse w = warehouses_->getTupleByPrimaryKey(vector<Integer>({warehouse_id}), warehousePrimaryKeyNames_);
     cout << "warehouse searched" <<endl;
-    Tuple* order = new Tuple(vector<Integer>({warehouse_id, district_id, d->getElement(districts_->offset["d_next_o_id"]), customer_id, Integer(INT_LENGTH, items.size(), PUBLIC)}));
+    Tuple* order = new Tuple(vector<Integer>({warehouse_id, district_id, d.getElement(districts_->offset["d_next_o_id"]), customer_id, Integer(INT_LENGTH, items.size(), PUBLIC)}));
     orders_->insertTuple(order);
     cout << "order inserted" <<endl;
     Tuple* neworder = new Tuple(vector<Integer>({warehouse_id, district_id, order->getElement(orders_->offset["o_id"])}));
@@ -601,14 +596,14 @@ bool TPCCDB::newOrderHome(Integer warehouse_id, Integer district_id, Integer cus
 
     for (int i = 0; i < items.size(); ++i) {
         //cout << items[i]->getElement(0).reveal<int>(PUBLIC) << " " <<items[i]->getElement(1).reveal<int>(PUBLIC)<<endl;
-        Stock* stock = stocks_->getTupleByPrimaryKey(vector<Integer>({items[i]->getElement(0), items[i]->getElement(1)}), stockPrimaryKeyNames_);
-        cout << "find stock : " << stock->getElement(0).reveal<int>(PUBLIC) << " " << stock->getElement(1).reveal<int>(PUBLIC) << endl;
-        stock->setElement(stocks_->offset["s_quantity"], stock->getElement(stocks_->offset["s_quantity"]) - items[i]->getElement(2));
-        stock->setElement(stocks_->offset["s_order_cnt"], stock->getElement(stocks_->offset["s_order_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
-        stock->setElement(stocks_->offset["s_ytd"], stock->getElement(stocks_->offset["s_ytd"]) + items[i]->getElement(2) * item_tuples[i]->getElement(items_->offset["i_price"]));
+        Stock stock = stocks_->getTupleByPrimaryKey(vector<Integer>({items[i]->getElement(0), items[i]->getElement(1)}), stockPrimaryKeyNames_);
+        cout << "find stock : " << stock.getElement(0).reveal<int>(PUBLIC) << " " << stock.getElement(1).reveal<int>(PUBLIC) << endl;
+        stock.setElement(stocks_->offset["s_quantity"], stock.getElement(stocks_->offset["s_quantity"]) - items[i]->getElement(2));
+        stock.setElement(stocks_->offset["s_order_cnt"], stock.getElement(stocks_->offset["s_order_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
+        stock.setElement(stocks_->offset["s_ytd"], stock.getElement(stocks_->offset["s_ytd"]) + items[i]->getElement(2) * item_tuples[i].getElement(items_->offset["i_price"]));
         Tuple* orderline = new Tuple(vector<Integer>({warehouse_id, district_id, order->getElement(orders_->offset["o_id"]),
                                                         Integer(INT_LENGTH, i + 1, PUBLIC), items[i]->getElement(1), items[i]->getElement(2),
-                                                        items[i]->getElement(0), items[i]->getElement(2) * item_tuples[i]->getElement(items_->offset["i_price"])}));
+                                                        items[i]->getElement(0), items[i]->getElement(2) * item_tuples[i].getElement(items_->offset["i_price"])}));
         orderlines_->insertTuple(orderline);
         //OrderLine* ol = insertOrderLine(line);
         // if (undo != nullptr) {
@@ -653,14 +648,14 @@ void TPCCDB::delivery(Integer warehouse_id,
         // }
         Integer d_id = Integer(INT_LENGTH, index, PUBLIC);
         //NewOrder* neworder = neworders_->tuples[0];
-        NewOrder* neworder = neworders_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, Integer(INT_LENGTH, 1, PUBLIC)}, neworderPrimaryKeyNames_);
-        if (neworder == NULL || (neworder->getElement(neworders_->offset["no_d_id"]) != d_id).reveal<bool>(PUBLIC) || (neworder->getElement(neworders_->offset["no_w_id"]) != warehouse_id).reveal<bool>(PUBLIC)) {
+        NewOrder neworder = neworders_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, Integer(INT_LENGTH, 1, PUBLIC)}, neworderPrimaryKeyNames_);
+        if ((neworder.getElement(neworders_->offset["no_d_id"]) != d_id).reveal<bool>(PUBLIC) || (neworder.getElement(neworders_->offset["no_w_id"]) != warehouse_id).reveal<bool>(PUBLIC)) {
             // No orders for this district
             // TODO: 2.7.4.2: If this occurs in max(1%, 1) of transactions, report it (???)
             continue;
         }
         //ASSERT(neworder->no_d_id == d_id && neworder->no_w_id == warehouse_id);
-        Integer o_id = neworder->getElement(neworders_->offset["no_o_id"]);
+        Integer o_id = neworder.getElement(neworders_->offset["no_o_id"]);
         
         //neworders_.erase(iterator);
         // if (undo != NULL) {
@@ -674,30 +669,30 @@ void TPCCDB::delivery(Integer warehouse_id,
         order->setElement(1, o_id);
         orders->push_back(order);
 
-        //Order* o = orders_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, o_id}, orderPrimaryKeyNames_);
+        Order o = orders_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, o_id}, orderPrimaryKeyNames_);
 
         //ASSERT(o->o_carrier_id == Order::NULL_CARRIER_ID);
         // if (undo != NULL) {
         //     (*undo)->save(o);
         // }
 
-        // Integer total = Integer(INT_LENGTH, 0, PUBLIC);
-        // Integer i = Integer(INT_LENGTH, 1, PUBLIC);
-        // while((i <= o->getElement(orders_->offset["o_ol_cnt"])).reveal<bool>(PUBLIC)){
-        //     i = i + Integer(INT_LENGTH, 1, PUBLIC);
-        //     OrderLine* line = orderlines_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, o_id, i}, orderlinePrimaryKeyNames_);
-        //     // if (undo != NULL) {
-        //     //     (*undo)->save(line);
-        //     // }
+        Integer total = Integer(INT_LENGTH, 0, PUBLIC);
+        Integer i = Integer(INT_LENGTH, 1, PUBLIC);
+        while((i <= o.getElement(orders_->offset["o_ol_cnt"])).reveal<bool>(PUBLIC)){
+            i = i + Integer(INT_LENGTH, 1, PUBLIC);
+            OrderLine line = orderlines_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, o_id, i}, orderlinePrimaryKeyNames_);
+            // if (undo != NULL) {
+            //     (*undo)->save(line);
+            // }
             
-        //     total = total + line->getElement(orderlines_->offset["ol_amount"]);
+            total = total + line.getElement(orderlines_->offset["ol_amount"]);
+        }
+        Customer c = customers_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, o.getElement(orders_->offset["o_c_id"])}, customerPrimaryKeyNames_);
+        // if (undo != NULL) {
+        //     (*undo)->save(c);
         // }
-        // Customer* c = customers_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, d_id, o->getElement(orders_->offset["o_c_id"])}, customerPrimaryKeyNames_);
-        // // if (undo != NULL) {
-        // //     (*undo)->save(c);
-        // // }
-        // c->setElement(customers_->offset["c_balance"], c->getElement(customers_->offset["c_balance"]) + total);
-        // c->setElement(customers_->offset["c_delivery_cnt"], c->getElement(customers_->offset["c_delivery_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
+        c.setElement(customers_->offset["c_balance"], c.getElement(customers_->offset["c_balance"]) + total);
+        c.setElement(customers_->offset["c_delivery_cnt"], c.getElement(customers_->offset["c_delivery_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
 
     }
 
@@ -709,9 +704,11 @@ void TPCCDB::payment(Integer warehouse_id, Integer district_id, Integer c_wareho
         Integer c_district_id, Integer customer_id, Integer h_amount, TPCCUndo** undo){
 
     cout << "start payment " << warehouse_id.reveal<int>(PUBLIC) << " "<< district_id.reveal<int>(PUBLIC) << " "<<customer_id.reveal<int>(PUBLIC) << endl;
-    Customer* customer = customers_->getTupleByPrimaryKey(vector<Integer>{c_warehouse_id, c_district_id, customer_id}, customerPrimaryKeyNames_);
+    Customer customer = customers_->getTupleByPrimaryKey(vector<Integer>{c_warehouse_id, c_district_id, customer_id}, customerPrimaryKeyNames_);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, undo);
+    cout << "done payment home" <<endl;
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, undo);
+    customer.name =  "customer";
     cout << "end payment " << warehouse_id.reveal<int>(PUBLIC) << " "<< district_id.reveal<int>(PUBLIC) << " "<<customer_id.reveal<int>(PUBLIC) << endl;
 
 }
@@ -719,21 +716,22 @@ void TPCCDB::payment(Integer warehouse_id, Integer district_id, Integer c_wareho
 void TPCCDB::paymentHome(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
         Integer c_district_id, Integer customer_id,  Integer h_amount, TPCCUndo** undo){
         
-        Warehouse* w = warehouses_->getTupleByPrimaryKey(vector<Integer>{warehouse_id}, warehousePrimaryKeyNames_);
+        Warehouse w = warehouses_->getTupleByPrimaryKey(vector<Integer>{warehouse_id}, warehousePrimaryKeyNames_);
         // if (undo != NULL) {
         //     //allocateUndo(undo);
         //     (*undo)->save(w);
         // }
-        w->setElement(warehouses_->offset["w_ytd"], w->getElement(warehouses_->offset["w_ytd"]) + h_amount);
-        District* d = districts_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, district_id}, districtPrimaryKeyNames_);
+       
+       // w.setElement(warehouses_->offset["w_ytd"], w.getElement(warehouses_->offset["w_ytd"]) + h_amount);
+        District d = districts_->getTupleByPrimaryKey(vector<Integer>{warehouse_id, district_id}, districtPrimaryKeyNames_);
         // if (undo != NULL) {
         //     (*undo)->save(d);
         // }
 
         // Insert the line into the history table
         History* h = new History(vector<Integer>{warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount});
-
-        histories_->insertTuple(h);
+        cout << "new history" <<endl;
+      //  histories_->insertTuple(h);
         // History* history = insertHistory(h);
         // if (undo != NULL) {
         //     (*undo)->inserted(history);
@@ -742,20 +740,20 @@ void TPCCDB::paymentHome(Integer warehouse_id, Integer district_id, Integer c_wa
     }
 void TPCCDB::paymentRemote(Integer warehouse_id, Integer district_id, Integer c_warehouse_id,
     Integer c_district_id, Integer c_id, Integer h_amount, TPCCUndo** undo){
-    Customer* customer = customers_->getTupleByPrimaryKey(vector<Integer>{c_warehouse_id, c_district_id, c_id}, customerPrimaryKeyNames_);
+    Customer customer = customers_->getTupleByPrimaryKey(vector<Integer>{c_warehouse_id, c_district_id, c_id}, customerPrimaryKeyNames_);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, undo);
 }
 
-void TPCCDB::internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer* c,
+void TPCCDB::internalPaymentRemote(Integer warehouse_id, Integer district_id, Customer c,
     Integer h_amount,  TPCCUndo** undo){
 
     // if (undo != NULL) {
     //     //allocateUndo(undo);
     //     (*undo)->save(c);
     // }
-    c->setElement(customers_->offset["c_balance"], c->getElement(customers_->offset["c_balance"]) - h_amount);
-    c->setElement(customers_->offset["c_ytd_payment"], c->getElement(customers_->offset["c_ytd_payment"]) + h_amount);
-    c->setElement(customers_->offset["c_payment_cnt"], c->getElement(customers_->offset["c_payment_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
+ //   c.setElement(customers_->offset["c_balance"], c.getElement(customers_->offset["c_balance"]) - h_amount);
+  //  c.setElement(customers_->offset["c_ytd_payment"], c.getElement(customers_->offset["c_ytd_payment"]) + h_amount);
+  //  c.setElement(customers_->offset["c_payment_cnt"], c.getElement(customers_->offset["c_payment_cnt"]) + Integer(INT_LENGTH, 1, PUBLIC));
     // c->c_balance = c->c_balance - h_amount;
     // c->c_ytd_payment = c->c_ytd_payment + h_amount;
     // c->c_payment_cnt = c->c_payment_cnt + Integer(INT_LENGTH, 1, PUBLIC);
